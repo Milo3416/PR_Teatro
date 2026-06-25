@@ -1,0 +1,875 @@
+<!doctype html>
+<html lang="es-MX">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Boletos | Auditorio Jorge Jimenez Cantu</title>
+  <meta name="description" content="Mapa interactivo de boletos para Auditorio Jorge Jimenez Cantu, Nicolas Romero." />
+  <style>
+    :root {
+      --bg: #12041f;
+      --panel: #1c0730;
+      --panel-2: #fff9f1;
+      --ink: #211826;
+      --muted: #6f6377;
+      --line: #980b13;
+      --gold: #d59c0a;
+      --gold-2: #f6c53a;
+      --pink: #ff4fa3;
+      --pink-2: #ff88c4;
+      --blue: #4fc3f7;
+      --blue-2: #9ee6ff;
+      --green: #25d366;
+      --selected: #58e36f;
+      --occupied: #6d6570;
+      --white: #fff;
+      --shadow: 0 18px 50px rgba(0, 0, 0, 0.34);
+      --radius: 20px;
+      --seat: 30px;
+      --gap: 8px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--white);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at 12% 10%, rgba(255, 79, 163, 0.28), transparent 30%),
+        radial-gradient(circle at 80% 16%, rgba(246, 197, 58, 0.28), transparent 28%),
+        radial-gradient(circle at 50% 100%, rgba(79, 195, 247, 0.26), transparent 38%),
+        var(--bg);
+    }
+
+    a { color: inherit; }
+
+    .app-shell {
+      width: min(1540px, calc(100% - 28px));
+      margin: 0 auto;
+      padding: 28px 0 42px;
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.8fr);
+      gap: 22px;
+      align-items: stretch;
+      margin-bottom: 22px;
+    }
+
+    .hero-card,
+    .reservation-card {
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      background: linear-gradient(135deg, rgba(255,255,255,0.13), rgba(255,255,255,0.05));
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(14px);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+
+    .hero-card { padding: 28px; position: relative; }
+    .hero-card::after {
+      content: "";
+      position: absolute;
+      inset: auto -50px -80px auto;
+      width: 240px;
+      height: 240px;
+      border-radius: 50%;
+      background: rgba(255, 79, 163, 0.22);
+      filter: blur(4px);
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      gap: 8px;
+      align-items: center;
+      padding: 8px 12px;
+      border-radius: 999px;
+      color: #ffe87f;
+      background: rgba(255, 255, 255, 0.1);
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      font-size: 12px;
+    }
+
+    h1 {
+      margin: 14px 0 10px;
+      max-width: 980px;
+      font-size: clamp(34px, 5vw, 76px);
+      line-height: 0.92;
+      letter-spacing: -0.06em;
+    }
+
+    .lead {
+      max-width: 760px;
+      color: rgba(255, 255, 255, 0.82);
+      line-height: 1.65;
+      font-size: 17px;
+      margin: 0 0 18px;
+    }
+
+    .venue-line {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 16px;
+      color: rgba(255, 255, 255, 0.9);
+      font-weight: 700;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 9px 12px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+    }
+
+    .price-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 18px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .price-card {
+      border-radius: 18px;
+      padding: 16px;
+      min-height: 120px;
+      color: #fff;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 12px 28px rgba(0,0,0,.22);
+    }
+
+    .price-card::before {
+      content: "";
+      position: absolute;
+      inset: 8px;
+      border-radius: 14px;
+      border: 2px dashed rgba(255,255,255,.62);
+      opacity: .7;
+    }
+
+    .price-card.gold { background: linear-gradient(135deg, #6c1b1f, var(--gold)); }
+    .price-card.pink { background: linear-gradient(135deg, #7e0a2f, var(--pink)); }
+    .price-card.blue { background: linear-gradient(135deg, #005d85, var(--blue)); }
+
+    .price-card strong, .price-card span { position: relative; z-index: 1; display: block; }
+    .price-card strong { font-size: 22px; letter-spacing: -0.03em; }
+    .price-card span { margin-top: 4px; font-size: 38px; line-height: 1; font-weight: 950; text-shadow: 0 4px 0 rgba(0,0,0,.18); }
+    .price-card small { position: relative; z-index: 1; display: block; margin-top: 10px; font-weight: 800; color: rgba(255,255,255,.9); }
+
+    .reservation-card { padding: 22px; }
+    .reservation-card h2 { margin: 0 0 12px; font-size: 28px; letter-spacing: -0.04em; }
+
+    .legend {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-bottom: 16px;
+      font-size: 13px;
+      color: rgba(255, 255, 255, 0.84);
+    }
+    .legend-item { display: flex; gap: 8px; align-items: center; }
+    .dot { width: 16px; height: 16px; border-radius: 5px; display: inline-block; box-shadow: inset 0 -2px 0 rgba(0,0,0,.18); }
+    .dot.available { background: #e7f7ff; }
+    .dot.selected { background: var(--selected); }
+    .dot.occupied { background: var(--occupied); }
+
+    .selected-list {
+      min-height: 112px;
+      max-height: 240px;
+      overflow: auto;
+      padding: 12px;
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      margin-bottom: 14px;
+    }
+
+    .empty { color: rgba(255,255,255,.65); padding: 18px 6px; text-align: center; }
+
+    .seat-line {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 12px;
+      padding: 9px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.10);
+      font-size: 14px;
+    }
+    .seat-line:last-child { border-bottom: 0; }
+    .seat-line strong { display: block; }
+    .seat-line span { color: rgba(255,255,255,.7); }
+
+    .total-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 12px;
+      padding: 14px 0;
+      border-top: 1px solid rgba(255, 255, 255, 0.12);
+      color: rgba(255,255,255,.85);
+    }
+    .total-row strong { color: #fff; font-size: 34px; }
+
+    .actions { display: grid; gap: 10px; }
+
+    .btn {
+      appearance: none;
+      border: 0;
+      cursor: pointer;
+      border-radius: 15px;
+      padding: 14px 16px;
+      font: inherit;
+      font-weight: 900;
+      transition: transform .16s ease, filter .16s ease, opacity .16s ease;
+    }
+    .btn:hover { transform: translateY(-1px); filter: brightness(1.06); }
+    .btn:disabled { cursor: not-allowed; opacity: .45; transform: none; }
+    .btn.primary { color: #07160d; background: linear-gradient(135deg, #2ff273, var(--green)); box-shadow: 0 14px 28px rgba(37,211,102,.25); }
+    .btn.secondary { color: #fff; background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.14); }
+
+    .map-card {
+      border-radius: 26px;
+      overflow: hidden;
+      background: #f8f8fb;
+      box-shadow: var(--shadow);
+      color: var(--ink);
+      border: 6px solid var(--line);
+    }
+
+    .map-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      padding: 14px 18px;
+      color: #fff;
+      background: linear-gradient(90deg, #830912, #b10d18);
+      border-bottom: 6px solid var(--line);
+    }
+    .map-toolbar strong { font-size: 18px; }
+    .map-toolbar span { color: rgba(255,255,255,.82); font-size: 14px; }
+
+    .seat-map-scroll {
+      overflow: auto;
+      width: 100%;
+      background: #f7f8fa;
+    }
+
+    .seat-map {
+      min-width: 1320px;
+      min-height: 820px;
+      display: grid;
+      grid-template-columns: 160px 1fr 120px;
+      background: #f7f8fa;
+    }
+
+    .facilities-left, .stage-right {
+      position: relative;
+      border-right: 6px solid var(--line);
+      background: #f9f9fb;
+    }
+    .stage-right {
+      border-right: 0;
+      border-left: 6px solid var(--line);
+      display: grid;
+      place-items: center;
+      background: #f5f3f6;
+    }
+
+    .vertical-word {
+      writing-mode: vertical-rl;
+      text-orientation: upright;
+      letter-spacing: .06em;
+      font-weight: 950;
+      font-size: 36px;
+      line-height: 1;
+      text-shadow: 0 3px 0 rgba(0,0,0,.12);
+    }
+    .vertical-word.sanitarios {
+      position: absolute;
+      left: 47px;
+      top: 160px;
+      color: #2ca9a4;
+    }
+    .vertical-word.stage { color: #80268f; }
+
+    .wc {
+      position: absolute;
+      left: 38px;
+      width: 80px;
+      height: 54px;
+      border-radius: 10px;
+      display: grid;
+      place-items: center;
+      color: #fff;
+      font-weight: 950;
+      font-size: 14px;
+      box-shadow: inset 0 -3px 0 rgba(0,0,0,.14);
+    }
+    .wc.top { top: 70px; background: #ffa7dc; }
+    .wc.bottom { bottom: 70px; background: #85c5ff; }
+    .wc::before { content: "WC"; }
+
+    .store-area {
+      position: absolute;
+      left: 160px;
+      bottom: 34px;
+      width: 150px;
+      padding-left: 10px;
+      color: #006d70;
+      font-weight: 950;
+    }
+    .store-area.toys { bottom: 190px; color: #b28707; }
+    .store-title { font-size: 15px; margin-bottom: 8px; }
+    .store-boxes { display: grid; grid-template-columns: 36px 70px; gap: 8px; align-items: stretch; }
+    .small-stack { display: grid; gap: 8px; }
+    .small-box, .big-box { border: 1px solid rgba(0,0,0,.28); border-radius: 2px; }
+    .toys .small-box { background: #fff2b9; }
+    .toys .big-box { background: #ffda54; height: 110px; }
+    .candy .small-box { background: #c9fff7; }
+    .candy .big-box { background: #13bfc4; height: 110px; }
+
+    .entrance-row {
+      position: absolute;
+      bottom: -6px;
+      left: 42px;
+      width: 270px;
+      display: flex;
+      justify-content: space-between;
+      pointer-events: none;
+    }
+    .entrance {
+      width: 90px;
+      height: 34px;
+      background: #098e4d;
+      color: #fff;
+      display: grid;
+      place-items: center;
+      font-weight: 900;
+      border: 2px solid #e8fff1;
+      box-shadow: 0 0 0 2px #098e4d;
+      font-size: 13px;
+    }
+
+    .center-hall {
+      position: relative;
+      padding: 28px 32px 36px;
+      background:
+        linear-gradient(#fff, #fff) padding-box,
+        repeating-linear-gradient(90deg, rgba(0,0,0,.02) 0, rgba(0,0,0,.02) 8px, transparent 8px, transparent 16px);
+    }
+
+    .hall-extras .side-door {
+      position: absolute;
+      left: -10px;
+      top: 47%;
+      width: 14px;
+      height: 86px;
+      border: 1px solid #333;
+      background: #c88;
+      transform: translateY(-50%);
+    }
+    .hall-extras .bottom-door {
+      position: absolute;
+      bottom: -8px;
+      left: 115px;
+      width: 110px;
+      height: 14px;
+      border: 1px solid #333;
+      background: #b77878;
+    }
+    .hall-extras .bottom-door.right { left: auto; right: 230px; }
+    .hall-extras .emergency {
+      position: absolute;
+      bottom: -25px;
+      width: 78px;
+      height: 28px;
+      background: #0d8b52;
+      color: #fff;
+      border: 2px solid #e8fff1;
+      font-size: 8px;
+      font-weight: 900;
+      display: grid;
+      place-items: center;
+      text-align: center;
+      line-height: 1.1;
+    }
+    .hall-extras .emergency.left { left: 620px; }
+    .hall-extras .emergency.right { right: 190px; }
+
+    .sections-wrap {
+      display: grid;
+      grid-template-columns: repeat(3, max-content);
+      gap: 44px;
+      align-items: start;
+      justify-content: center;
+    }
+
+    .section-block {
+      display: grid;
+      grid-template-rows: auto auto auto;
+      gap: 18px;
+      justify-items: center;
+      min-width: calc((var(--seat) * 7) + (var(--gap) * 6));
+    }
+
+    .section-title {
+      text-align: center;
+      font-weight: 950;
+      font-size: 40px;
+      line-height: .92;
+      letter-spacing: -0.06em;
+      text-transform: uppercase;
+      text-shadow: 0 5px 0 rgba(0,0,0,.11), 0 0 10px rgba(255,255,255,.8);
+      user-select: none;
+    }
+    .section-title.gold { color: var(--gold); }
+    .section-title.pink { color: var(--pink); }
+    .section-title.blue { color: var(--blue); }
+
+    .seat-grid {
+      display: grid;
+      grid-template-columns: repeat(7, var(--seat));
+      gap: var(--gap);
+      align-items: center;
+      justify-content: center;
+    }
+
+    .seat {
+      width: var(--seat);
+      height: var(--seat);
+      border: 0;
+      border-radius: 7px;
+      color: rgba(0,0,0,.82);
+      font-size: 10px;
+      font-weight: 950;
+      letter-spacing: -0.04em;
+      cursor: pointer;
+      box-shadow: inset 0 -4px 0 rgba(0,0,0,.16), 0 2px 8px rgba(0,0,0,.12);
+      transition: transform .12s ease, outline-color .12s ease, filter .12s ease;
+      position: relative;
+      touch-action: manipulation;
+    }
+    .seat:hover { transform: translateY(-2px); filter: brightness(1.05); }
+    .seat:focus-visible { outline: 3px solid #131313; outline-offset: 2px; }
+    .seat.selected { background: var(--selected) !important; color: #042208; outline: 3px solid #0b8d2a; outline-offset: 1px; }
+    .seat.occupied { background: var(--occupied) !important; color: rgba(255,255,255,.72); cursor: not-allowed; text-decoration: line-through; filter: grayscale(.25); }
+    .seat.occupied:hover { transform: none; }
+    .seat.gold { background: linear-gradient(180deg, var(--gold-2), var(--gold)); }
+    .seat.pink { background: linear-gradient(180deg, var(--pink-2), var(--pink)); }
+    .seat.blue { background: linear-gradient(180deg, var(--blue-2), var(--blue)); }
+
+    .tiny-stage-arrow {
+      position: absolute;
+      right: 6px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 82px;
+      height: 66px;
+      border: 2px solid #333;
+      background: repeating-linear-gradient(90deg, transparent 0, transparent 11px, rgba(0,0,0,.55) 12px, transparent 13px), #fff;
+    }
+    .tiny-stage-arrow::after {
+      content: "";
+      position: absolute;
+      right: 8px;
+      top: 50%;
+      width: 0;
+      height: 0;
+      border-top: 10px solid transparent;
+      border-bottom: 10px solid transparent;
+      border-left: 16px solid #111;
+      transform: translateY(-50%);
+    }
+
+    .status-toast {
+      position: fixed;
+      left: 50%;
+      bottom: 22px;
+      transform: translateX(-50%) translateY(120%);
+      opacity: 0;
+      background: rgba(10, 8, 14, .92);
+      color: #fff;
+      border: 1px solid rgba(255,255,255,.14);
+      padding: 12px 16px;
+      border-radius: 999px;
+      box-shadow: var(--shadow);
+      transition: transform .22s ease, opacity .22s ease;
+      z-index: 50;
+      pointer-events: none;
+    }
+    .status-toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+
+    .admin-box {
+      margin-top: 14px;
+      padding-top: 14px;
+      border-top: 1px solid rgba(255,255,255,.12);
+    }
+    .admin-box summary {
+      cursor: pointer;
+      color: rgba(255,255,255,.72);
+      font-size: 13px;
+      font-weight: 800;
+    }
+    .admin-box p { color: rgba(255,255,255,.65); font-size: 12px; line-height: 1.45; }
+    .admin-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+    .small-input {
+      width: 100%;
+      border: 1px solid rgba(255,255,255,.18);
+      background: rgba(255,255,255,.1);
+      color: #fff;
+      border-radius: 12px;
+      padding: 10px 12px;
+      font: inherit;
+      font-size: 13px;
+    }
+
+    @media (max-width: 1040px) {
+      .hero { grid-template-columns: 1fr; }
+      .price-grid { grid-template-columns: 1fr; }
+      .reservation-card { order: 2; }
+    }
+
+    @media (max-width: 760px) {
+      .app-shell { width: calc(100% - 18px); padding-top: 10px; }
+      .hero-card, .reservation-card { padding: 18px; border-radius: 16px; }
+      .map-card { border-width: 4px; border-radius: 18px; }
+      .map-toolbar { display: block; }
+      .map-toolbar span { display: block; margin-top: 4px; }
+      :root { --seat: 28px; --gap: 7px; }
+      .seat-map { min-width: 1180px; }
+      .sections-wrap { gap: 32px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="hero">
+      <section class="hero-card">
+        <span class="eyebrow">Producciones Rainbow · Boletos</span>
+        <h1>Auditorio Jorge Jimenez Cantu</h1>
+        <p class="lead">Selecciona tus lugares en el mapa interactivo. El sistema calcula el total por zona y prepara el mensaje para reservar por WhatsApp.</p>
+        <div class="venue-line">
+          <span class="pill">Nicolas Romero</span>
+          <a class="pill" href="https://maps.app.goo.gl/t8iTc4FMj5uHDVzK8" target="_blank" rel="noopener">Abrir ubicacion</a>
+        </div>
+        <div class="price-grid" aria-label="Precios por seccion">
+          <div class="price-card gold"><strong>GOLDEN</strong><span>$200</span><small>Incluye fotos con Huntrix y los Saja Boys</small></div>
+          <div class="price-card pink"><strong>GENERAL 1</strong><span>$150</span><small>Zona central</small></div>
+          <div class="price-card blue"><strong>GENERAL 2</strong><span>$100</span><small>Zona general izquierda</small></div>
+        </div>
+      </section>
+
+      <aside class="reservation-card" aria-live="polite">
+        <h2>Mi reserva</h2>
+        <div class="legend" aria-label="Leyenda de estado de butacas">
+          <div class="legend-item"><i class="dot available"></i> Disponible</div>
+          <div class="legend-item"><i class="dot selected"></i> Seleccionado</div>
+          <div class="legend-item"><i class="dot occupied"></i> Ocupado</div>
+        </div>
+        <div id="selectedList" class="selected-list"><div class="empty">Ningun asiento seleccionado</div></div>
+        <div class="total-row"><span>Total</span><strong id="totalAmount">$0</strong></div>
+        <label style="display:grid;gap:6px;margin-bottom:10px;color:rgba(255,255,255,.72);font-size:13px;font-weight:800">WhatsApp de reserva
+          <select id="phoneSelect" class="small-input">
+            <option value="principal">55 4294 1014</option>
+            <option value="secundario">624 192 6939</option>
+          </select>
+        </label>
+        <div class="actions">
+          <button id="reserveBtn" class="btn primary" type="button" disabled>Reservar ahora</button>
+          <button id="clearBtn" class="btn secondary" type="button" disabled>Limpiar seleccion</button>
+        </div>
+        <details class="admin-box">
+          <summary>Administrar ocupados en este navegador</summary>
+          <p>Selecciona asientos y usa "Marcar seleccion como ocupada" para simular lugares vendidos. Esto se guarda en este navegador con localStorage.</p>
+          <div class="admin-grid">
+            <button id="markOccupiedBtn" class="btn secondary" type="button" disabled>Marcar ocupados</button>
+            <button id="resetOccupiedBtn" class="btn secondary" type="button">Liberar todos</button>
+          </div>
+          <p>Tambien puedes cargar IDs separados por coma.</p>
+          <input id="occupiedInput" class="small-input" type="text" placeholder="Ej. 1A, 1B, 12N" />
+          <button id="loadOccupiedBtn" class="btn secondary" style="margin-top:8px;width:100%" type="button">Cargar ocupados</button>
+        </details>
+      </aside>
+    </header>
+
+    <main class="map-card">
+      <div class="map-toolbar">
+        <strong>Mapa de asientos</strong>
+        <span>Replica digital de zonas: General 2, General 1 y Golden</span>
+      </div>
+      <div class="seat-map-scroll" aria-label="Mapa desplazable de butacas">
+        <div class="seat-map">
+          <aside class="facilities-left" aria-hidden="true">
+            <div class="wc top"></div>
+            <div class="vertical-word sanitarios">SANITARIOS</div>
+            <div class="wc bottom"></div>
+            <div class="store-area toys">
+              <div class="store-title">JUGUETERIA</div>
+              <div class="store-boxes"><div class="small-stack"><div class="small-box"></div><div class="small-box"></div><div class="small-box"></div></div><div class="big-box"></div></div>
+            </div>
+            <div class="store-area candy">
+              <div class="store-title">DULCERIA</div>
+              <div class="store-boxes"><div class="small-stack"><div class="small-box"></div><div class="small-box"></div><div class="small-box"></div></div><div class="big-box"></div></div>
+            </div>
+            <div class="entrance-row"><div class="entrance">Entrada</div><div class="entrance">Entrada</div></div>
+          </aside>
+
+          <section class="center-hall">
+            <div class="hall-extras" aria-hidden="true">
+              <div class="side-door"></div>
+              <div class="bottom-door"></div>
+              <div class="bottom-door right"></div>
+              <div class="emergency left">EMERGENCY<br>EXIT</div>
+              <div class="emergency right">EMERGENCY<br>EXIT</div>
+              <div class="tiny-stage-arrow"></div>
+            </div>
+            <div id="sectionsWrap" class="sections-wrap"></div>
+          </section>
+
+          <aside class="stage-right" aria-hidden="true">
+            <div class="vertical-word stage">ESCENARIO HUNTRIX</div>
+          </aside>
+        </div>
+      </div>
+    </main>
+  </div>
+  <div id="toast" class="status-toast"></div>
+
+  <script>
+    const CONTACT_PHONES = { principal: '525542941014', secundario: '526241926939' };
+    const EVENT_NAME = 'Auditorio Jorge Jimenez Cantu - Huntrix';
+    const VENUE_MAP = 'https://maps.app.goo.gl/t8iTc4FMj5uHDVzK8';
+    const OCCUPIED_KEY = 'jimenez-cantu-occupied-v1';
+
+    const sections = [
+      { id: 'general2', title: 'GENERAL 2', labelClass: 'blue', seatClass: 'blue', price: 100, columns: ['T','S','R','Q','P','O','Ñ'] },
+      { id: 'general1', title: 'GENERAL 1', labelClass: 'pink', seatClass: 'pink', price: 150, columns: ['N','M','L','K','J','I','H'] },
+      { id: 'golden', title: 'GOLDEN', labelClass: 'gold', seatClass: 'gold', price: 200, columns: ['G','F','E','D','C','B','A'] }
+    ];
+
+    const selected = new Map();
+    let occupied = new Set(loadOccupiedSeats());
+
+    const sectionsWrap = document.getElementById('sectionsWrap');
+    const selectedList = document.getElementById('selectedList');
+    const totalAmount = document.getElementById('totalAmount');
+    const reserveBtn = document.getElementById('reserveBtn');
+    const phoneSelect = document.getElementById('phoneSelect');
+    const clearBtn = document.getElementById('clearBtn');
+    const markOccupiedBtn = document.getElementById('markOccupiedBtn');
+    const resetOccupiedBtn = document.getElementById('resetOccupiedBtn');
+    const loadOccupiedBtn = document.getElementById('loadOccupiedBtn');
+    const occupiedInput = document.getElementById('occupiedInput');
+    const toast = document.getElementById('toast');
+
+    function buildMap() {
+      sectionsWrap.innerHTML = '';
+      sections.forEach(section => {
+        const block = document.createElement('article');
+        block.className = 'section-block';
+        block.setAttribute('aria-label', `${section.title}, $${section.price} por boleto`);
+
+        const topGrid = makeSeatGrid(section, 1, 15);
+        const title = document.createElement('div');
+        title.className = `section-title ${section.labelClass}`;
+        title.textContent = section.title;
+        const bottomGrid = makeSeatGrid(section, 16, 30);
+
+        block.append(topGrid, title, bottomGrid);
+        sectionsWrap.appendChild(block);
+      });
+    }
+
+    function makeSeatGrid(section, startRow, endRow) {
+      const grid = document.createElement('div');
+      grid.className = 'seat-grid';
+      for (let row = startRow; row <= endRow; row++) {
+        section.columns.forEach(col => {
+          const seatId = `${row}${col}`;
+          const btn = document.createElement('button');
+          btn.className = `seat ${section.seatClass}`;
+          btn.type = 'button';
+          btn.textContent = seatId;
+          btn.dataset.seatId = seatId;
+          btn.dataset.sectionId = section.id;
+          btn.dataset.sectionTitle = section.title;
+          btn.dataset.price = section.price;
+          btn.dataset.row = row;
+          btn.dataset.column = col;
+          btn.setAttribute('aria-label', `${section.title} asiento ${seatId}, $${section.price}`);
+          if (occupied.has(seatId)) {
+            btn.classList.add('occupied');
+            btn.disabled = true;
+            btn.setAttribute('aria-label', `${section.title} asiento ${seatId}, ocupado`);
+          }
+          btn.addEventListener('click', () => toggleSeat(btn));
+          grid.appendChild(btn);
+        });
+      }
+      return grid;
+    }
+
+    function toggleSeat(btn) {
+      const seatId = btn.dataset.seatId;
+      if (occupied.has(seatId)) return;
+      if (selected.has(seatId)) {
+        selected.delete(seatId);
+        btn.classList.remove('selected');
+      } else {
+        selected.set(seatId, {
+          seatId,
+          sectionId: btn.dataset.sectionId,
+          sectionTitle: btn.dataset.sectionTitle,
+          price: Number(btn.dataset.price),
+          row: Number(btn.dataset.row),
+          column: btn.dataset.column
+        });
+        btn.classList.add('selected');
+      }
+      renderSelection();
+    }
+
+    function renderSelection() {
+      const items = sortedSelected();
+      if (!items.length) {
+        selectedList.innerHTML = '<div class="empty">Ningun asiento seleccionado</div>';
+      } else {
+        selectedList.innerHTML = items.map(item => `
+          <div class="seat-line">
+            <div><strong>${item.seatId}</strong><span>${item.sectionTitle}</span></div>
+            <b>$${item.price}</b>
+          </div>
+        `).join('');
+      }
+      const total = items.reduce((sum, item) => sum + item.price, 0);
+      totalAmount.textContent = currency(total);
+      const hasItems = items.length > 0;
+      reserveBtn.disabled = !hasItems;
+      clearBtn.disabled = !hasItems;
+      markOccupiedBtn.disabled = !hasItems;
+    }
+
+    function sortedSelected() {
+      const order = new Map(sections.map((section, index) => [section.id, index]));
+      return Array.from(selected.values()).sort((a, b) => {
+        if (order.get(a.sectionId) !== order.get(b.sectionId)) return order.get(a.sectionId) - order.get(b.sectionId);
+        if (a.row !== b.row) return a.row - b.row;
+        return a.column.localeCompare(b.column, 'es-MX');
+      });
+    }
+
+    function currency(value) {
+      return value.toLocaleString('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 });
+    }
+
+    function clearSelection() {
+      selected.clear();
+      document.querySelectorAll('.seat.selected').forEach(seat => seat.classList.remove('selected'));
+      renderSelection();
+    }
+
+    function reserveNow() {
+      const items = sortedSelected();
+      if (!items.length) return;
+      const total = items.reduce((sum, item) => sum + item.price, 0);
+      const grouped = sections.map(section => {
+        const seats = items.filter(item => item.sectionId === section.id).map(item => item.seatId);
+        return seats.length ? `${section.title}: ${seats.join(', ')}` : null;
+      }).filter(Boolean).join('\n');
+
+      const message = [
+        `Hola, quiero reservar boletos para ${EVENT_NAME}.`,
+        '',
+        grouped,
+        '',
+        `Total: ${currency(total)}`,
+        `Ubicacion: ${VENUE_MAP}`
+      ].join('\n');
+
+      const selectedPhone = CONTACT_PHONES[phoneSelect.value] || CONTACT_PHONES.principal;
+      window.open(`https://wa.me/${selectedPhone}?text=${encodeURIComponent(message)}`, '_blank', 'noopener');
+    }
+
+    function markSelectionOccupied() {
+      const items = sortedSelected();
+      if (!items.length) return;
+      items.forEach(item => occupied.add(item.seatId));
+      saveOccupiedSeats();
+      applyOccupiedState();
+      clearSelection();
+      showToast(`${items.length} asiento(s) marcado(s) como ocupado(s).`);
+    }
+
+    function resetOccupied() {
+      if (!confirm('Liberar todos los asientos ocupados guardados en este navegador?')) return;
+      occupied = new Set();
+      saveOccupiedSeats();
+      applyOccupiedState();
+      showToast('Todos los asientos quedaron disponibles.');
+    }
+
+    function loadOccupiedFromInput() {
+      const ids = occupiedInput.value.split(',').map(value => value.trim().toUpperCase()).filter(Boolean);
+      if (!ids.length) return;
+      ids.forEach(id => occupied.add(id));
+      saveOccupiedSeats();
+      applyOccupiedState();
+      occupiedInput.value = '';
+      clearSelection();
+      showToast('Asientos ocupados cargados.');
+    }
+
+    function applyOccupiedState() {
+      document.querySelectorAll('.seat').forEach(btn => {
+        const seatId = btn.dataset.seatId;
+        const isOccupied = occupied.has(seatId);
+        btn.classList.toggle('occupied', isOccupied);
+        btn.disabled = isOccupied;
+        if (isOccupied) btn.classList.remove('selected');
+      });
+      selected.forEach((_, id) => { if (occupied.has(id)) selected.delete(id); });
+      renderSelection();
+    }
+
+    function loadOccupiedSeats() {
+      try {
+        return JSON.parse(localStorage.getItem(OCCUPIED_KEY) || '[]');
+      } catch (error) {
+        return [];
+      }
+    }
+
+    function saveOccupiedSeats() {
+      localStorage.setItem(OCCUPIED_KEY, JSON.stringify(Array.from(occupied)));
+    }
+
+    function showToast(message) {
+      toast.textContent = message;
+      toast.classList.add('show');
+      window.clearTimeout(showToast.timer);
+      showToast.timer = window.setTimeout(() => toast.classList.remove('show'), 2200);
+    }
+
+    reserveBtn.addEventListener('click', reserveNow);
+    clearBtn.addEventListener('click', clearSelection);
+    markOccupiedBtn.addEventListener('click', markSelectionOccupied);
+    resetOccupiedBtn.addEventListener('click', resetOccupied);
+    loadOccupiedBtn.addEventListener('click', loadOccupiedFromInput);
+
+    buildMap();
+    renderSelection();
+  </script>
+</body>
+</html>
