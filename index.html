@@ -1,0 +1,2234 @@
+<!doctype html>
+<html lang="es-MX">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Boletos | Auditorio Jorge Jimenez Cantu</title>
+  <meta name="description" content="Mapa interactivo de boletos para Auditorio Jorge Jimenez Cantu, Nicolas Romero." />
+  <style>
+    :root {
+      --bg: #12041f;
+      --panel: #1c0730;
+      --panel-2: #fff9f1;
+      --ink: #211826;
+      --muted: #6f6377;
+      --line: #980b13;
+      --gold: #d59c0a;
+      --gold-2: #f6c53a;
+      --pink: #ff4fa3;
+      --pink-2: #ff88c4;
+      --blue: #4fc3f7;
+      --blue-2: #9ee6ff;
+      --green: #25d366;
+      --selected: #58e36f;
+      --occupied-total: #5a535e;
+      --occupied-partial: #8b5a2b;
+      --release: #ff2e2e;
+      --white: #fff;
+      --shadow: 0 18px 50px rgba(0, 0, 0, 0.34);
+      --radius: 20px;
+      --seat: 30px;
+      --gap: 8px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--white);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at 12% 10%, rgba(255, 79, 163, 0.28), transparent 30%),
+        radial-gradient(circle at 80% 16%, rgba(246, 197, 58, 0.28), transparent 28%),
+        radial-gradient(circle at 50% 100%, rgba(79, 195, 247, 0.26), transparent 38%),
+        var(--bg);
+    }
+
+    a { color: inherit; }
+
+    .app-shell {
+      width: min(1540px, calc(100% - 28px));
+      margin: 0 auto;
+      padding: 28px 0 42px;
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.8fr);
+      gap: 22px;
+      align-items: stretch;
+      margin-bottom: 22px;
+    }
+
+    .hero-card,
+    .reservation-card {
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      background: linear-gradient(135deg, rgba(255,255,255,0.13), rgba(255,255,255,0.05));
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(14px);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+
+    .hero-card { padding: 28px; position: relative; }
+    .hero-card::after {
+      content: "";
+      position: absolute;
+      inset: auto -50px -80px auto;
+      width: 240px;
+      height: 240px;
+      border-radius: 50%;
+      background: rgba(255, 79, 163, 0.22);
+      filter: blur(4px);
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      gap: 8px;
+      align-items: center;
+      padding: 8px 12px;
+      border-radius: 999px;
+      color: #ffe87f;
+      background: rgba(255, 255, 255, 0.1);
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      font-size: 12px;
+    }
+
+    h1 {
+      margin: 14px 0 10px;
+      max-width: 980px;
+      font-size: clamp(34px, 5vw, 76px);
+      line-height: 0.92;
+      letter-spacing: -0.06em;
+    }
+
+    .lead {
+      max-width: 760px;
+      color: rgba(255, 255, 255, 0.82);
+      line-height: 1.65;
+      font-size: 17px;
+      margin: 0 0 18px;
+    }
+
+    .venue-line {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 16px;
+      color: rgba(255, 255, 255, 0.9);
+      font-weight: 700;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 9px 12px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+    }
+
+    .price-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 18px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .price-card {
+      border-radius: 18px;
+      padding: 16px;
+      min-height: 120px;
+      color: #fff;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 12px 28px rgba(0,0,0,.22);
+    }
+
+    .price-card::before {
+      content: "";
+      position: absolute;
+      inset: 8px;
+      border-radius: 14px;
+      border: 2px dashed rgba(255,255,255,.62);
+      opacity: .7;
+    }
+
+    .price-card.gold { background: linear-gradient(135deg, #6c1b1f, var(--gold)); }
+    .price-card.pink { background: linear-gradient(135deg, #7e0a2f, var(--pink)); }
+    .price-card.blue { background: linear-gradient(135deg, #005d85, var(--blue)); }
+
+    .price-card strong, .price-card span { position: relative; z-index: 1; display: block; }
+    .price-card strong { font-size: 22px; letter-spacing: -0.03em; }
+    .price-card span { margin-top: 4px; font-size: 38px; line-height: 1; font-weight: 950; text-shadow: 0 4px 0 rgba(0,0,0,.18); }
+    .price-card small { position: relative; z-index: 1; display: block; margin-top: 10px; font-weight: 800; color: rgba(255,255,255,.9); }
+
+    .dashboard-panel {
+      position: relative;
+      z-index: 1;
+      margin-top: 18px;
+      padding: 16px;
+      border-radius: 20px;
+      background: rgba(255, 255, 255, 0.10);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+    }
+
+    .dashboard-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .dashboard-header h2 {
+      margin: 0;
+      font-size: 22px;
+      letter-spacing: -0.04em;
+    }
+
+    .dashboard-header span {
+      color: rgba(255,255,255,.68);
+      font-size: 12px;
+      font-weight: 800;
+      text-align: right;
+    }
+
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 10px;
+    }
+
+    .metric-card {
+      min-height: 104px;
+      padding: 14px;
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.12);
+      border: 1px solid rgba(255, 255, 255, 0.13);
+    }
+
+    .metric-card small {
+      display: block;
+      color: rgba(255,255,255,.70);
+      font-size: 11px;
+      font-weight: 900;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+    }
+
+    .metric-card strong {
+      display: block;
+      margin-top: 8px;
+      color: #fff;
+      font-size: clamp(26px, 3vw, 38px);
+      line-height: 1;
+      letter-spacing: -0.06em;
+    }
+
+    .metric-card span {
+      display: block;
+      margin-top: 8px;
+      color: rgba(255,255,255,.72);
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .zone-metrics {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .zone-card {
+      padding: 12px;
+      border-radius: 15px;
+      background: rgba(0,0,0,.18);
+      border: 1px solid rgba(255,255,255,.12);
+    }
+
+    .zone-card b { display: block; font-size: 13px; }
+    .zone-card span { display: block; margin-top: 5px; color: rgba(255,255,255,.74); font-size: 12px; font-weight: 800; }
+
+    .progress-shell {
+      width: 100%;
+      height: 8px;
+      overflow: hidden;
+      border-radius: 999px;
+      background: rgba(255,255,255,.16);
+      margin-top: 10px;
+    }
+
+    .progress-fill {
+      height: 100%;
+      width: 0%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, var(--blue), var(--pink), var(--gold-2));
+      transition: width .28s ease;
+    }
+
+    .reservation-card { padding: 22px; }
+    .reservation-card h2 { margin: 0 0 12px; font-size: 28px; letter-spacing: -0.04em; }
+
+    .legend {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      margin-bottom: 16px;
+      font-size: 13px;
+      color: rgba(255, 255, 255, 0.84);
+    }
+    .legend-item { display: flex; gap: 8px; align-items: center; }
+    .dot { width: 16px; height: 16px; border-radius: 5px; display: inline-block; box-shadow: inset 0 -2px 0 rgba(0,0,0,.18); }
+    .dot.available { background: #e7f7ff; }
+    .dot.selected { background: var(--selected); }
+    .dot.occupied-total { background: var(--occupied-total); }
+    .dot.occupied-partial { background: var(--occupied-partial); }
+
+    .selected-list {
+      min-height: 112px;
+      max-height: 240px;
+      overflow: auto;
+      padding: 12px;
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      margin-bottom: 14px;
+    }
+
+    .empty { color: rgba(255,255,255,.65); padding: 18px 6px; text-align: center; }
+
+    .seat-line {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 12px;
+      padding: 9px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.10);
+      font-size: 14px;
+    }
+    .seat-line:last-child { border-bottom: 0; }
+    .seat-line strong { display: block; }
+    .seat-line span { color: rgba(255,255,255,.7); }
+
+    .total-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 12px;
+      padding: 14px 0;
+      border-top: 1px solid rgba(255, 255, 255, 0.12);
+      color: rgba(255,255,255,.85);
+    }
+    .total-row strong { color: #fff; font-size: 34px; }
+
+    .actions { display: grid; gap: 10px; }
+
+    .share-note {
+      margin: 10px 0 0;
+      color: rgba(255,255,255,.66);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .partial-payment-panel {
+      display: grid;
+      gap: 10px;
+      margin: 0 0 12px;
+      padding: 12px;
+      border-radius: 16px;
+      background: rgba(255, 159, 28, 0.12);
+      border: 1px solid rgba(255, 159, 28, 0.34);
+    }
+
+    .partial-payment-panel[hidden] { display: none; }
+
+    .payment-summary {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .payment-summary div {
+      padding: 10px;
+      border-radius: 12px;
+      background: rgba(255,255,255,.10);
+      border: 1px solid rgba(255,255,255,.12);
+      color: rgba(255,255,255,.76);
+      font-size: 11px;
+      font-weight: 800;
+    }
+
+    .payment-summary strong {
+      display: block;
+      color: #fff;
+      font-size: 18px;
+      margin-top: 2px;
+    }
+
+    .btn {
+      appearance: none;
+      border: 0;
+      cursor: pointer;
+      border-radius: 15px;
+      padding: 14px 16px;
+      font: inherit;
+      font-weight: 900;
+      transition: transform .16s ease, filter .16s ease, opacity .16s ease;
+    }
+    .btn:hover { transform: translateY(-1px); filter: brightness(1.06); }
+    .btn:disabled { cursor: not-allowed; opacity: .45; transform: none; }
+    .btn.primary { color: #07160d; background: linear-gradient(135deg, #2ff273, var(--green)); box-shadow: 0 14px 28px rgba(37,211,102,.25); }
+    .btn.secondary { color: #fff; background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.14); }
+
+    .map-card {
+      border-radius: 26px;
+      overflow: hidden;
+      background: #f8f8fb;
+      box-shadow: var(--shadow);
+      color: var(--ink);
+      border: 6px solid var(--line);
+    }
+
+    .map-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      padding: 14px 18px;
+      color: #fff;
+      background: linear-gradient(90deg, #830912, #b10d18);
+      border-bottom: 6px solid var(--line);
+    }
+    .map-toolbar strong { font-size: 18px; }
+    .map-toolbar span { color: rgba(255,255,255,.82); font-size: 14px; }
+
+    .seat-map-scroll {
+      overflow: auto;
+      width: 100%;
+      background: #f7f8fa;
+    }
+
+    .seat-map {
+      min-width: 1320px;
+      min-height: 820px;
+      display: grid;
+      grid-template-columns: 160px 1fr 120px;
+      background: #f7f8fa;
+    }
+
+    .facilities-left, .stage-right {
+      position: relative;
+      border-right: 6px solid var(--line);
+      background: #f9f9fb;
+    }
+    .stage-right {
+      border-right: 0;
+      border-left: 6px solid var(--line);
+      display: grid;
+      place-items: center;
+      background: #f5f3f6;
+    }
+
+    .vertical-word {
+      writing-mode: vertical-rl;
+      text-orientation: upright;
+      letter-spacing: .06em;
+      font-weight: 950;
+      font-size: 36px;
+      line-height: 1;
+      text-shadow: 0 3px 0 rgba(0,0,0,.12);
+    }
+    .vertical-word.sanitarios {
+      position: absolute;
+      left: 47px;
+      top: 160px;
+      color: #2ca9a4;
+    }
+    .vertical-word.stage { color: #80268f; }
+
+    .wc {
+      position: absolute;
+      left: 38px;
+      width: 80px;
+      height: 54px;
+      border-radius: 10px;
+      display: grid;
+      place-items: center;
+      color: #fff;
+      font-weight: 950;
+      font-size: 14px;
+      box-shadow: inset 0 -3px 0 rgba(0,0,0,.14);
+    }
+    .wc.top { top: 70px; background: #ffa7dc; }
+    .wc.bottom { bottom: 70px; background: #85c5ff; }
+    .wc::before { content: "WC"; }
+
+    .store-area {
+      position: absolute;
+      left: 160px;
+      bottom: 34px;
+      width: 150px;
+      padding-left: 10px;
+      color: #006d70;
+      font-weight: 950;
+    }
+    .store-area.toys { bottom: 190px; color: #b28707; }
+    .store-title { font-size: 15px; margin-bottom: 8px; }
+    .store-boxes { display: grid; grid-template-columns: 36px 70px; gap: 8px; align-items: stretch; }
+    .small-stack { display: grid; gap: 8px; }
+    .small-box, .big-box { border: 1px solid rgba(0,0,0,.28); border-radius: 2px; }
+    .toys .small-box { background: #fff2b9; }
+    .toys .big-box { background: #ffda54; height: 110px; }
+    .candy .small-box { background: #c9fff7; }
+    .candy .big-box { background: #13bfc4; height: 110px; }
+
+    .entrance-row {
+      position: absolute;
+      bottom: -6px;
+      left: 42px;
+      width: 270px;
+      display: flex;
+      justify-content: space-between;
+      pointer-events: none;
+    }
+    .entrance {
+      width: 90px;
+      height: 34px;
+      background: #098e4d;
+      color: #fff;
+      display: grid;
+      place-items: center;
+      font-weight: 900;
+      border: 2px solid #e8fff1;
+      box-shadow: 0 0 0 2px #098e4d;
+      font-size: 13px;
+    }
+
+    .center-hall {
+      position: relative;
+      padding: 28px 32px 36px;
+      background:
+        linear-gradient(#fff, #fff) padding-box,
+        repeating-linear-gradient(90deg, rgba(0,0,0,.02) 0, rgba(0,0,0,.02) 8px, transparent 8px, transparent 16px);
+    }
+
+    .hall-extras .side-door {
+      position: absolute;
+      left: -10px;
+      top: 47%;
+      width: 14px;
+      height: 86px;
+      border: 1px solid #333;
+      background: #c88;
+      transform: translateY(-50%);
+    }
+    .hall-extras .bottom-door {
+      position: absolute;
+      bottom: -8px;
+      left: 115px;
+      width: 110px;
+      height: 14px;
+      border: 1px solid #333;
+      background: #b77878;
+    }
+    .hall-extras .bottom-door.right { left: auto; right: 230px; }
+    .hall-extras .emergency {
+      position: absolute;
+      bottom: -25px;
+      width: 78px;
+      height: 28px;
+      background: #0d8b52;
+      color: #fff;
+      border: 2px solid #e8fff1;
+      font-size: 8px;
+      font-weight: 900;
+      display: grid;
+      place-items: center;
+      text-align: center;
+      line-height: 1.1;
+    }
+    .hall-extras .emergency.left { left: 620px; }
+    .hall-extras .emergency.right { right: 190px; }
+
+    .sections-wrap {
+      display: grid;
+      grid-template-columns: repeat(3, max-content);
+      gap: 44px;
+      align-items: start;
+      justify-content: center;
+    }
+
+    .section-block {
+      display: grid;
+      grid-template-rows: auto auto auto;
+      gap: 18px;
+      justify-items: center;
+      min-width: calc((var(--seat) * 7) + (var(--gap) * 6));
+    }
+
+    .section-title {
+      text-align: center;
+      font-weight: 950;
+      font-size: 40px;
+      line-height: .92;
+      letter-spacing: -0.06em;
+      text-transform: uppercase;
+      text-shadow: 0 5px 0 rgba(0,0,0,.11), 0 0 10px rgba(255,255,255,.8);
+      user-select: none;
+    }
+    .section-title.gold { color: var(--gold); }
+    .section-title.pink { color: var(--pink); }
+    .section-title.blue { color: var(--blue); }
+
+    .seat-grid {
+      display: grid;
+      grid-template-columns: repeat(7, var(--seat));
+      gap: var(--gap);
+      align-items: center;
+      justify-content: center;
+    }
+
+    .seat {
+      width: var(--seat);
+      height: var(--seat);
+      border: 0;
+      border-radius: 7px;
+      color: rgba(0,0,0,.82);
+      font-size: 10px;
+      font-weight: 950;
+      letter-spacing: -0.04em;
+      cursor: pointer;
+      box-shadow: inset 0 -4px 0 rgba(0,0,0,.16), 0 2px 8px rgba(0,0,0,.12);
+      transition: transform .12s ease, outline-color .12s ease, filter .12s ease;
+      position: relative;
+      touch-action: manipulation;
+    }
+    .seat:hover { transform: translateY(-2px); filter: brightness(1.05); }
+    .seat:focus-visible { outline: 3px solid #131313; outline-offset: 2px; }
+    .seat.selected { background: var(--selected) !important; color: #042208; outline: 3px solid #0b8d2a; outline-offset: 1px; }
+    .seat.release-selected { outline: 4px solid var(--release); outline-offset: 1px; transform: translateY(-2px); }
+    .seat.liquidation-selected { outline: 4px solid var(--selected); outline-offset: 1px; transform: translateY(-2px); filter: brightness(1.14); }
+    .seat.occupied-total { background: var(--occupied-total) !important; color: rgba(255,255,255,.72); cursor: not-allowed; text-decoration: line-through; filter: grayscale(.25); }
+    .seat.occupied-partial { background: var(--occupied-partial) !important; color: #fff8ed; cursor: help; box-shadow: inset 0 -4px 0 rgba(0,0,0,.24), 0 0 0 2px rgba(255,255,255,.35); }
+    .seat.occupied-total:hover, .seat.occupied-partial:hover { transform: none; }
+    .seat-map.release-mode .seat.occupied-total, .seat-map.release-mode .seat.occupied-partial { cursor: pointer; }
+    .seat-map.release-mode .seat.occupied-total:hover, .seat-map.release-mode .seat.occupied-partial:hover { transform: translateY(-2px); filter: brightness(1.08); }
+    .seat-map.liquidation-mode .seat.occupied-partial { cursor: pointer; }
+    .seat-map.liquidation-mode .seat.occupied-partial:hover { transform: translateY(-2px); filter: brightness(1.10); }
+    .seat.gold { background: linear-gradient(180deg, var(--gold-2), var(--gold)); }
+    .seat.pink { background: linear-gradient(180deg, var(--pink-2), var(--pink)); }
+    .seat.blue { background: linear-gradient(180deg, var(--blue-2), var(--blue)); }
+
+    .tiny-stage-arrow {
+      position: absolute;
+      right: 6px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 82px;
+      height: 66px;
+      border: 2px solid #333;
+      background: repeating-linear-gradient(90deg, transparent 0, transparent 11px, rgba(0,0,0,.55) 12px, transparent 13px), #fff;
+    }
+    .tiny-stage-arrow::after {
+      content: "";
+      position: absolute;
+      right: 8px;
+      top: 50%;
+      width: 0;
+      height: 0;
+      border-top: 10px solid transparent;
+      border-bottom: 10px solid transparent;
+      border-left: 16px solid #111;
+      transform: translateY(-50%);
+    }
+
+    .status-toast {
+      position: fixed;
+      left: 50%;
+      bottom: 22px;
+      transform: translateX(-50%) translateY(120%);
+      opacity: 0;
+      background: rgba(10, 8, 14, .92);
+      color: #fff;
+      border: 1px solid rgba(255,255,255,.14);
+      padding: 12px 16px;
+      border-radius: 999px;
+      box-shadow: var(--shadow);
+      transition: transform .22s ease, opacity .22s ease;
+      z-index: 50;
+      pointer-events: none;
+    }
+    .status-toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+
+    .admin-box {
+      margin-top: 14px;
+      padding-top: 14px;
+      border-top: 1px solid rgba(255,255,255,.12);
+    }
+    .admin-box summary {
+      cursor: pointer;
+      color: rgba(255,255,255,.72);
+      font-size: 13px;
+      font-weight: 800;
+    }
+    .admin-box p { color: rgba(255,255,255,.65); font-size: 12px; line-height: 1.45; }
+    .admin-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .admin-grid.three { grid-template-columns: repeat(3, 1fr); }
+
+    .inline-check {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 0 0 10px;
+      color: rgba(255,255,255,.72);
+      font-size: 13px;
+      font-weight: 800;
+    }
+    .inline-check input { width: 18px; height: 18px; accent-color: var(--green); }
+
+    .small-input {
+      width: 100%;
+      border: 1px solid rgba(255,255,255,.18);
+      background: rgba(255,255,255,.1);
+      color: #fff;
+      border-radius: 12px;
+      padding: 10px 12px;
+      font: inherit;
+      font-size: 13px;
+    }
+
+    @media (max-width: 1040px) {
+      .hero { grid-template-columns: 1fr; }
+      .price-grid { grid-template-columns: 1fr; }
+      .dashboard-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .zone-metrics { grid-template-columns: 1fr; }
+      .reservation-card { order: 2; }
+    }
+
+    @media (max-width: 760px) {
+      .app-shell { width: calc(100% - 18px); padding-top: 10px; }
+      .hero-card, .reservation-card { padding: 18px; border-radius: 16px; }
+      .dashboard-grid { grid-template-columns: 1fr; }
+      .dashboard-header { display: block; }
+      .dashboard-header span { display: block; text-align: left; margin-top: 4px; }
+      .map-card { border-width: 4px; border-radius: 18px; }
+      .map-toolbar { display: block; }
+      .map-toolbar span { display: block; margin-top: 4px; }
+      :root { --seat: 28px; --gap: 7px; }
+      .seat-map { min-width: 1180px; }
+      .sections-wrap { gap: 32px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="hero">
+      <section class="hero-card">
+        <span class="eyebrow">Producciones Rainbow · Boletos</span>
+        <h1>Auditorio Jorge Jimenez Cantu</h1>
+        <p class="lead">Selecciona tus lugares en el mapa interactivo. El sistema calcula el total por zona y prepara el mensaje para reservar por WhatsApp.</p>
+        <div class="venue-line">
+          <span class="pill">Nicolas Romero</span>
+          <a class="pill" href="https://maps.app.goo.gl/t8iTc4FMj5uHDVzK8" target="_blank" rel="noopener">Abrir ubicacion</a>
+        </div>
+        <div class="price-grid" aria-label="Precios por seccion">
+          <div class="price-card gold"><strong>GOLDEN</strong><span>$200</span><small>Incluye fotos con Huntrix y los Saja Boys</small></div>
+          <div class="price-card pink"><strong>GENERAL 1</strong><span>$150</span><small>Zona central</small></div>
+          <div class="price-card blue"><strong>GENERAL 2</strong><span>$100</span><small>Zona general izquierda</small></div>
+        </div>
+
+        <section class="dashboard-panel" aria-label="Metricas de ventas">
+          <div class="dashboard-header">
+            <h2>Dashboard de ventas</h2>
+            <span id="dashboardUpdated">Sincronizando con Sheets...</span>
+          </div>
+          <div class="dashboard-grid">
+            <article class="metric-card">
+              <small>Boletos vendidos</small>
+              <strong id="metricSold">0</strong>
+              <span id="metricSoldNote">de 630 lugares</span>
+            </article>
+            <article class="metric-card">
+              <small>Ocupado parcial</small>
+              <strong id="metricPartial">0</strong>
+              <span>apartados / por liquidar</span>
+            </article>
+            <article class="metric-card">
+              <small>Boletos faltantes</small>
+              <strong id="metricAvailable">630</strong>
+              <span>lugares disponibles</span>
+            </article>
+            <article class="metric-card">
+              <small>Recaudado</small>
+              <strong id="metricRevenue">$0</strong>
+              <span>venta registrada</span>
+            </article>
+            <article class="metric-card">
+              <small>Avance</small>
+              <strong id="metricProgress">0%</strong>
+              <div class="progress-shell"><div id="metricProgressFill" class="progress-fill"></div></div>
+            </article>
+          </div>
+          <div class="zone-metrics" aria-label="Metricas por zona">
+            <div class="zone-card"><b>Golden</b><span id="zoneGolden">0 vendidos · 210 faltantes</span></div>
+            <div class="zone-card"><b>General 1</b><span id="zoneGeneral1">0 vendidos · 210 faltantes</span></div>
+            <div class="zone-card"><b>General 2</b><span id="zoneGeneral2">0 vendidos · 210 faltantes</span></div>
+          </div>
+        </section>
+      </section>
+
+      <aside class="reservation-card" aria-live="polite">
+        <h2>Mi reserva</h2>
+        <div class="legend" aria-label="Leyenda de estado de butacas">
+          <div class="legend-item"><i class="dot available"></i> Disponible</div>
+          <div class="legend-item"><i class="dot selected"></i> Seleccionado</div>
+          <div class="legend-item"><i class="dot occupied-total"></i> Ocupado total</div>
+          <div class="legend-item"><i class="dot occupied-partial"></i> Ocupado parcial</div>
+        </div>
+        <div id="selectedList" class="selected-list"><div class="empty">Ningun asiento seleccionado</div></div>
+        <div class="total-row"><span>Total</span><strong id="totalAmount">$0</strong></div>
+        <label style="display:grid;gap:6px;margin-bottom:10px;color:rgba(255,255,255,.72);font-size:13px;font-weight:800">Nombre del cliente
+          <input id="customerName" class="small-input" type="text" autocomplete="name" placeholder="Ej. Maria Lopez" />
+        </label>
+        <label style="display:grid;gap:6px;margin-bottom:10px;color:rgba(255,255,255,.72);font-size:13px;font-weight:800">Celular / WhatsApp del cliente
+          <input id="customerContact" class="small-input" type="tel" inputmode="tel" autocomplete="tel" placeholder="Ej. 55 1234 5678" />
+        </label>
+        <label style="display:grid;gap:6px;margin-bottom:10px;color:rgba(255,255,255,.72);font-size:13px;font-weight:800">Estado al registrar
+          <select id="bookingStatus" class="small-input">
+            <option value="Ocupado total">Ocupado total</option>
+            <option value="Ocupado parcial">Ocupado parcial</option>
+          </select>
+        </label>
+        <div id="partialPaymentPanel" class="partial-payment-panel" hidden>
+          <label style="display:grid;gap:6px;color:rgba(255,255,255,.78);font-size:13px;font-weight:900">Pago recibido hasta el momento
+            <input id="partialPaymentAmount" class="small-input" type="number" inputmode="numeric" min="1" step="1" placeholder="Ej. 500" />
+          </label>
+          <div class="payment-summary" aria-label="Resumen de pago parcial">
+            <div>Pagado<strong id="partialPaidSummary">$0</strong></div>
+            <div>Resta<strong id="partialRemainingSummary">$0</strong></div>
+          </div>
+          <p class="share-note">En pago parcial no se genera imagen de boleto oficial. El mensaje de WhatsApp incluira el pago realizado y el saldo pendiente.</p>
+        </div>
+        <p class="share-note compact-note">El WhatsApp se enviara unicamente al numero del cliente capturado arriba.</p>
+        <div class="actions">
+          <button id="reserveBtn" class="btn primary" type="button" disabled>Reservar ahora</button>
+          <button id="clearBtn" class="btn secondary" type="button" disabled>Limpiar seleccion</button>
+        </div>
+        <p class="share-note">WhatsApp abre el chat del cliente con el mensaje precargado. Por seguridad de WhatsApp, el usuario debe presionar enviar. La imagen del boleto oficial solo se genera cuando el estado es Ocupado total.</p>
+        <details class="admin-box">
+          <summary>Administrar asientos</summary>
+          <p>El mapa consulta Google Sheets para bloquear los lugares registrados. Activa el modo eliminar para seleccionar asientos ocupados y borrarlos de Google Sheets.</p>
+          <div class="admin-grid">
+            <button id="refreshSheetBtn" class="btn secondary" type="button">Actualizar desde Sheets</button>
+          </div>
+          <div class="admin-grid" style="margin-top:8px">
+            <button id="releaseModeBtn" class="btn secondary" type="button">Modo eliminar: apagado</button>
+            <button id="releaseSeatsBtn" class="btn secondary" type="button" disabled>Eliminar seleccionados</button>
+          </div>
+          <p>Tambien puedes escribir IDs separados por coma para eliminarlos de Google Sheets.</p>
+          <input id="occupiedInput" class="small-input" type="text" placeholder="Ej. 1A, 1B, 12N" />
+          <div class="admin-grid" style="margin-top:8px">
+            <button id="releaseInputBtn" class="btn secondary" type="button">Eliminar IDs escritos</button>
+          </div>
+          <hr style="border:0;border-top:1px solid rgba(255,255,255,.14);margin:14px 0">
+          <p><strong>Liquidar pagos parciales:</strong> selecciona asientos marrones o escribe sus IDs para pasarlos a ocupado total y enviar el boleto oficial al cliente.</p>
+          <div class="admin-grid" style="margin-top:8px">
+            <button id="liquidationModeBtn" class="btn secondary" type="button">Modo liquidar parcial: apagado</button>
+            <button id="liquidateSeatsBtn" class="btn secondary" type="button" disabled>Liquidar seleccionados</button>
+          </div>
+          <input id="liquidationInput" class="small-input" type="text" placeholder="Ej. 1A, 1B, 12N" style="margin-top:8px" />
+          <div class="admin-grid" style="margin-top:8px">
+            <button id="liquidateInputBtn" class="btn secondary" type="button">Liquidar IDs escritos</button>
+          </div>
+          <button id="resetOccupiedBtn" class="btn secondary" style="margin-top:8px;width:100%" type="button">Limpiar cache local y sincronizar</button>
+        </details>
+      </aside>
+    </header>
+
+    <main class="map-card">
+      <div class="map-toolbar">
+        <strong>Mapa de asientos</strong>
+        <span>Replica digital de zonas: General 2, General 1 y Golden</span>
+      </div>
+      <div class="seat-map-scroll" aria-label="Mapa desplazable de butacas">
+        <div class="seat-map">
+          <aside class="facilities-left" aria-hidden="true">
+            <div class="wc top"></div>
+            <div class="vertical-word sanitarios">SANITARIOS</div>
+            <div class="wc bottom"></div>
+            <div class="store-area toys">
+              <div class="store-title">JUGUETERIA</div>
+              <div class="store-boxes"><div class="small-stack"><div class="small-box"></div><div class="small-box"></div><div class="small-box"></div></div><div class="big-box"></div></div>
+            </div>
+            <div class="store-area candy">
+              <div class="store-title">DULCERIA</div>
+              <div class="store-boxes"><div class="small-stack"><div class="small-box"></div><div class="small-box"></div><div class="small-box"></div></div><div class="big-box"></div></div>
+            </div>
+            <div class="entrance-row"><div class="entrance">Entrada</div><div class="entrance">Entrada</div></div>
+          </aside>
+
+          <section class="center-hall">
+            <div class="hall-extras" aria-hidden="true">
+              <div class="side-door"></div>
+              <div class="bottom-door"></div>
+              <div class="bottom-door right"></div>
+              <div class="emergency left">EMERGENCY<br>EXIT</div>
+              <div class="emergency right">EMERGENCY<br>EXIT</div>
+              <div class="tiny-stage-arrow"></div>
+            </div>
+            <div id="sectionsWrap" class="sections-wrap"></div>
+          </section>
+
+          <aside class="stage-right" aria-hidden="true">
+            <div class="vertical-word stage">ESCENARIO HUNTRIX</div>
+          </aside>
+        </div>
+      </div>
+    </main>
+  </div>
+  <div id="toast" class="status-toast"></div>
+
+  <script>
+    const BRAND_NAME = 'Producciones Rainbow';
+    const BRAND_FACEBOOK = 'https://www.facebook.com/produccionesrainbow';
+    const EVENT_NAME = 'Auditorio Jorge Jimenez Cantu - Huntrix';
+    const WHATSAPP_EVENT_TEXT = 'la funcion de las Huntrix - Auditorio Jorge Jimenez Cantu';
+    const VENUE_MAP = 'https://maps.app.goo.gl/t8iTc4FMj5uHDVzK8';
+    const OCCUPIED_KEY = 'jimenez-cantu-occupied-v1';
+    const OCCUPIED_TOTAL_KEY = 'jimenez-cantu-occupied-total-v2';
+    const OCCUPIED_PARTIAL_KEY = 'jimenez-cantu-occupied-partial-v2';
+    const SEAT_DETAILS_KEY = 'jimenez-cantu-seat-details-v1';
+    const SYNC_INTERVAL_MS = 15000;
+    let syncTimer = null;
+    // 1) Publica el Apps Script como Web App.
+    // 2) Pega aqui la URL que termina en /exec.
+    const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyEblsUPY-PHyV6zMMY3Hg27sBGNqTJuqzxSSJVpfK8sGadVucvn_ZDEZKK0l8igOw5/exec';
+
+    const sections = [
+      { id: 'general2', title: 'GENERAL 2', labelClass: 'blue', seatClass: 'blue', price: 100, columns: ['T','S','R','Q','P','O','Ñ'], ticket: { nombre: 'AZUL', primary: '#11aeea', secondary: '#005d85', accent: '#9ee6ff' } },
+      { id: 'general1', title: 'GENERAL 1', labelClass: 'pink', seatClass: 'pink', price: 150, columns: ['N','M','L','K','J','I','H'], ticket: { nombre: 'ROJO', primary: '#e71945', secondary: '#7e0a2f', accent: '#ffb3c4' } },
+      { id: 'golden', title: 'GOLDEN', labelClass: 'gold', seatClass: 'gold', price: 200, columns: ['G','F','E','D','C','B','A'], ticket: { nombre: 'DORADO', primary: '#d59c0a', secondary: '#6c1b1f', accent: '#ffe789' } }
+    ];
+
+    const selected = new Map();
+    const releaseSelection = new Set();
+    const liquidationSelection = new Set();
+    let occupiedTotal = new Set(loadSeatSet(OCCUPIED_TOTAL_KEY, loadSeatSet(OCCUPIED_KEY)));
+    let occupiedPartial = new Set(loadSeatSet(OCCUPIED_PARTIAL_KEY));
+    let seatDetails = loadSeatDetails();
+    let releaseMode = false;
+    let liquidationMode = false;
+
+    const sectionsWrap = document.getElementById('sectionsWrap');
+    const selectedList = document.getElementById('selectedList');
+    const totalAmount = document.getElementById('totalAmount');
+    const reserveBtn = document.getElementById('reserveBtn');
+    const bookingStatus = document.getElementById('bookingStatus');
+    const partialPaymentPanel = document.getElementById('partialPaymentPanel');
+    const partialPaymentAmount = document.getElementById('partialPaymentAmount');
+    const partialPaidSummary = document.getElementById('partialPaidSummary');
+    const partialRemainingSummary = document.getElementById('partialRemainingSummary');
+    const customerName = document.getElementById('customerName');
+    const customerContact = document.getElementById('customerContact');
+    const clearBtn = document.getElementById('clearBtn');
+    const resetOccupiedBtn = document.getElementById('resetOccupiedBtn');
+    const refreshSheetBtn = document.getElementById('refreshSheetBtn');
+    const releaseModeBtn = document.getElementById('releaseModeBtn');
+    const releaseSeatsBtn = document.getElementById('releaseSeatsBtn');
+    const liquidationModeBtn = document.getElementById('liquidationModeBtn');
+    const liquidateSeatsBtn = document.getElementById('liquidateSeatsBtn');
+    const liquidationInput = document.getElementById('liquidationInput');
+    const liquidateInputBtn = document.getElementById('liquidateInputBtn');
+    const releaseInputBtn = document.getElementById('releaseInputBtn');
+    const dashboardUpdated = document.getElementById('dashboardUpdated');
+    const metricSold = document.getElementById('metricSold');
+    const metricSoldNote = document.getElementById('metricSoldNote');
+    const metricPartial = document.getElementById('metricPartial');
+    const metricAvailable = document.getElementById('metricAvailable');
+    const metricRevenue = document.getElementById('metricRevenue');
+    const metricProgress = document.getElementById('metricProgress');
+    const metricProgressFill = document.getElementById('metricProgressFill');
+    const zoneGolden = document.getElementById('zoneGolden');
+    const zoneGeneral1 = document.getElementById('zoneGeneral1');
+    const zoneGeneral2 = document.getElementById('zoneGeneral2');
+    const occupiedInput = document.getElementById('occupiedInput');
+    const toast = document.getElementById('toast');
+
+    function buildMap() {
+      sectionsWrap.innerHTML = '';
+      sections.forEach(section => {
+        const block = document.createElement('article');
+        block.className = 'section-block';
+        block.setAttribute('aria-label', `${section.title}, $${section.price} por boleto`);
+
+        const topGrid = makeSeatGrid(section, 1, 15);
+        const title = document.createElement('div');
+        title.className = `section-title ${section.labelClass}`;
+        title.textContent = section.title;
+        const bottomGrid = makeSeatGrid(section, 16, 30);
+
+        block.append(topGrid, title, bottomGrid);
+        sectionsWrap.appendChild(block);
+      });
+    }
+
+    function makeSeatGrid(section, startRow, endRow) {
+      const grid = document.createElement('div');
+      grid.className = 'seat-grid';
+      for (let row = startRow; row <= endRow; row++) {
+        section.columns.forEach(col => {
+          const seatId = `${row}${col}`;
+          const btn = document.createElement('button');
+          btn.className = `seat ${section.seatClass}`;
+          btn.type = 'button';
+          btn.textContent = seatId;
+          btn.dataset.seatId = seatId;
+          btn.dataset.sectionId = section.id;
+          btn.dataset.sectionTitle = section.title;
+          btn.dataset.price = section.price;
+          btn.dataset.row = row;
+          btn.dataset.column = col;
+          btn.setAttribute('aria-label', `${section.title} asiento ${seatId}, $${section.price}`);
+          btn.addEventListener('click', () => toggleSeat(btn));
+          applySeatStateToButton(btn);
+          grid.appendChild(btn);
+        });
+      }
+      return grid;
+    }
+
+    function toggleSeat(btn) {
+      const seatId = btn.dataset.seatId;
+
+      if (releaseMode) {
+        if (!isSeatOccupied(seatId)) {
+          showToast('Solo puedes seleccionar asientos ocupados para eliminar.');
+          return;
+        }
+        if (releaseSelection.has(seatId)) {
+          releaseSelection.delete(seatId);
+          btn.classList.remove('release-selected');
+        } else {
+          releaseSelection.add(seatId);
+          btn.classList.add('release-selected');
+        }
+        updateReleaseModeUI();
+        return;
+      }
+
+      if (liquidationMode) {
+        if (!occupiedPartial.has(seatId)) {
+          showToast('Solo puedes liquidar asientos en pago parcial.');
+          return;
+        }
+        if (liquidationSelection.has(seatId)) {
+          liquidationSelection.delete(seatId);
+          btn.classList.remove('liquidation-selected');
+        } else {
+          liquidationSelection.add(seatId);
+          btn.classList.add('liquidation-selected');
+        }
+        updateLiquidationModeUI();
+        return;
+      }
+
+      if (isSeatOccupied(seatId)) return;
+      if (selected.has(seatId)) {
+        selected.delete(seatId);
+        btn.classList.remove('selected');
+      } else {
+        selected.set(seatId, {
+          seatId,
+          sectionId: btn.dataset.sectionId,
+          sectionTitle: btn.dataset.sectionTitle,
+          price: Number(btn.dataset.price),
+          row: Number(btn.dataset.row),
+          column: btn.dataset.column
+        });
+        btn.classList.add('selected');
+      }
+      renderSelection();
+    }
+
+    function normalizeSeatId(value) {
+      return String(value || '').trim().toUpperCase();
+    }
+
+    function isSeatOccupied(seatId) {
+      return occupiedTotal.has(seatId) || occupiedPartial.has(seatId);
+    }
+
+    function getSeatState(seatId) {
+      if (occupiedTotal.has(seatId)) return 'total';
+      if (occupiedPartial.has(seatId)) return 'partial';
+      return 'available';
+    }
+
+    function applySeatStateToButton(btn) {
+      const seatId = btn.dataset.seatId;
+      const state = getSeatState(seatId);
+      btn.classList.remove('occupied', 'occupied-total', 'occupied-partial', 'release-selected', 'liquidation-selected');
+
+      if (state === 'total') {
+        btn.classList.add('occupied-total');
+        // No usamos disabled para que el tooltip y los modos de administracion funcionen siempre.
+        btn.disabled = false;
+        btn.setAttribute('aria-disabled', 'true');
+        btn.title = 'Ocupado total';
+        btn.setAttribute('aria-label', `${btn.dataset.sectionTitle} asiento ${seatId}, ocupado total`);
+      } else if (state === 'partial') {
+        const detail = seatDetails.get(seatId) || {};
+        const paid = Number(detail.pagoRealizado ?? detail.pago ?? detail.totalReserva ?? 0);
+        const remaining = Number(detail.saldoRestante ?? detail.saldo ?? 0);
+        const tooltip = paid > 0 ? `Pago Parcial de ${currency(paid)}` : 'Pago Parcial';
+        btn.classList.add('occupied-partial');
+        // No bloqueamos el boton; toggleSeat evita venderlo y permite ver tooltip/liquidarlo.
+        btn.disabled = false;
+        btn.setAttribute('aria-disabled', 'true');
+        btn.title = tooltip;
+        btn.setAttribute('aria-label', `${btn.dataset.sectionTitle} asiento ${seatId}, ${tooltip}${remaining > 0 ? `, resta ${currency(remaining)}` : ''}`);
+      } else {
+        btn.disabled = false;
+        btn.removeAttribute('aria-disabled');
+        btn.title = '';
+        btn.setAttribute('aria-label', `${btn.dataset.sectionTitle} asiento ${seatId}, disponible, $${btn.dataset.price}`);
+      }
+
+      if (releaseSelection.has(seatId)) btn.classList.add('release-selected');
+      if (liquidationSelection.has(seatId)) btn.classList.add('liquidation-selected');
+    }
+
+    function renderSelection() {
+      const items = sortedSelected();
+      if (!items.length) {
+        selectedList.innerHTML = '<div class="empty">Ningun asiento seleccionado</div>';
+      } else {
+        selectedList.innerHTML = items.map(item => `
+          <div class="seat-line">
+            <div><strong>${item.seatId}</strong><span>${item.sectionTitle}</span></div>
+            <b>$${item.price}</b>
+          </div>
+        `).join('');
+      }
+      const total = getSelectedTotal(items);
+      totalAmount.textContent = currency(total);
+      const hasItems = items.length > 0;
+      reserveBtn.disabled = !hasItems;
+      clearBtn.disabled = !hasItems;
+      updatePaymentPanel();
+      // La ocupacion se registra siempre en Google Sheets al reservar.
+    }
+
+    function sortedSelected() {
+      const order = new Map(sections.map((section, index) => [section.id, index]));
+      return Array.from(selected.values()).sort((a, b) => {
+        if (order.get(a.sectionId) !== order.get(b.sectionId)) return order.get(a.sectionId) - order.get(b.sectionId);
+        if (a.row !== b.row) return a.row - b.row;
+        return getColumnSortValue(a) - getColumnSortValue(b);
+      });
+    }
+
+    function getColumnSortValue(item) {
+      const section = sections.find(section => section.id === item.sectionId);
+      if (!section) return 999;
+      const humanOrder = section.columns.slice().reverse();
+      const index = humanOrder.indexOf(item.column);
+      return index === -1 ? 999 : index;
+    }
+
+    function currency(value) {
+      return Number(value || 0).toLocaleString('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 });
+    }
+
+    function getSelectedTotal(items = sortedSelected()) {
+      return items.reduce((sum, item) => sum + item.price, 0);
+    }
+
+    function isPartialBooking() {
+      return String(bookingStatus.value || '').toLowerCase().includes('parcial');
+    }
+
+    function parseMoneyInput(value) {
+      const number = Number(String(value || '').replace(/[^0-9.]/g, ''));
+      return Number.isFinite(number) ? Math.round(number) : 0;
+    }
+
+    function getPaymentDetails(total = getSelectedTotal()) {
+      const estado = bookingStatus.value || 'Ocupado total';
+      const partial = isPartialBooking();
+      const paid = partial ? parseMoneyInput(partialPaymentAmount.value) : total;
+      const remaining = Math.max(total - paid, 0);
+      return { estado, partial, total, paid, remaining };
+    }
+
+    function updatePaymentPanel() {
+      if (!partialPaymentPanel) return;
+      const items = sortedSelected();
+      const total = getSelectedTotal(items);
+      const partial = isPartialBooking();
+      partialPaymentPanel.hidden = !partial;
+      if (!partial) {
+        if (partialPaymentAmount) partialPaymentAmount.value = '';
+        if (partialPaidSummary) partialPaidSummary.textContent = '$0';
+        if (partialRemainingSummary) partialRemainingSummary.textContent = '$0';
+        return;
+      }
+      if (partialPaymentAmount) partialPaymentAmount.max = String(Math.max(total - 1, 1));
+      const paid = parseMoneyInput(partialPaymentAmount?.value);
+      const remaining = Math.max(total - paid, 0);
+      if (partialPaidSummary) partialPaidSummary.textContent = currency(paid);
+      if (partialRemainingSummary) partialRemainingSummary.textContent = currency(remaining);
+    }
+
+    function distributePaymentBySeat(items, paid, total) {
+      let remainingPaid = paid;
+      return items.map((item, index) => {
+        let seatPaid;
+        if (index === items.length - 1) {
+          seatPaid = remainingPaid;
+        } else {
+          seatPaid = total > 0 ? Math.round((paid * item.price) / total) : 0;
+          seatPaid = Math.min(Math.max(seatPaid, 0), item.price, remainingPaid);
+        }
+        remainingPaid = Math.max(remainingPaid - seatPaid, 0);
+        return {
+          seatId: item.seatId,
+          pagoRealizado: seatPaid,
+          saldoRestante: Math.max(item.price - seatPaid, 0)
+        };
+      });
+    }
+
+    function getSectionBySeatId(seatId) {
+      const column = String(seatId || '').replace(/[0-9]/g, '').trim().toUpperCase();
+      return sections.find(section => section.columns.includes(column));
+    }
+
+    function getTotalCapacity() {
+      return sections.reduce((sum, section) => sum + (section.columns.length * 30), 0);
+    }
+
+    function emptyZoneStats() {
+      return sections.reduce((acc, section) => {
+        acc[section.title] = {
+          zona: section.title,
+          vendidos: 0,
+          ingresos: 0,
+          parciales: 0,
+          ocupados: 0,
+          totalAsientos: section.columns.length * 30,
+          faltantes: section.columns.length * 30,
+          porcentaje: 0
+        };
+        return acc;
+      }, {});
+    }
+
+    function buildStatsFromLocal() {
+      const totalAsientos = getTotalCapacity();
+      const zonas = emptyZoneStats();
+      let ingresosTotales = 0;
+      let ocupadosTotal = 0;
+      let ocupadosParcial = 0;
+
+      const addSeat = (seatId, state) => {
+        const section = getSectionBySeatId(seatId);
+        if (!section || !zonas[section.title]) return;
+        const zone = zonas[section.title];
+        if (state === 'partial') {
+          const detail = seatDetails.get(normalizeSeatId(seatId)) || {};
+          const paid = Number(detail.pagoRealizado ?? detail.pago ?? detail.totalReserva ?? 0);
+          zone.parciales = (zone.parciales || 0) + 1;
+          zone.ingresos += paid;
+          ingresosTotales += paid;
+          ocupadosParcial += 1;
+        } else {
+          zone.vendidos += 1;
+          zone.ingresos += section.price;
+          ingresosTotales += section.price;
+          ocupadosTotal += 1;
+        }
+      };
+
+      Array.from(occupiedTotal).forEach(seatId => addSeat(seatId, 'total'));
+      Array.from(occupiedPartial).forEach(seatId => {
+        if (!occupiedTotal.has(seatId)) addSeat(seatId, 'partial');
+      });
+
+      Object.values(zonas).forEach(zone => {
+        zone.parciales = Number(zone.parciales || 0);
+        zone.ocupados = zone.vendidos + zone.parciales;
+        zone.faltantes = Math.max(zone.totalAsientos - zone.ocupados, 0);
+        zone.porcentaje = zone.totalAsientos ? Math.round((zone.ocupados / zone.totalAsientos) * 100) : 0;
+      });
+
+      const boletosOcupados = ocupadosTotal + ocupadosParcial;
+      return {
+        totalAsientos,
+        boletosVendidos: ocupadosTotal,
+        ocupadosTotal,
+        ocupadosParcial,
+        boletosOcupados,
+        boletosFaltantes: Math.max(totalAsientos - boletosOcupados, 0),
+        porcentajeVendido: totalAsientos ? Math.round((boletosOcupados / totalAsientos) * 100) : 0,
+        ingresosTotales,
+        zonas: Object.values(zonas)
+      };
+    }
+
+    function normalizeStats(stats) {
+      if (Array.isArray(stats)) {
+        occupiedTotal = new Set(stats.map(normalizeSeatId).filter(Boolean));
+        occupiedPartial = new Set();
+        return buildStatsFromLocal();
+      }
+
+      if (!stats || typeof stats !== 'object') return buildStatsFromLocal();
+
+      const fallback = buildStatsFromLocal();
+      const totalAsientos = Number(stats.totalAsientos || fallback.totalAsientos);
+      const ocupadosTotal = Number(stats.ocupadosTotal ?? stats.boletosVendidos ?? stats.totalVendidos ?? fallback.ocupadosTotal ?? 0);
+      const ocupadosParcial = Number(stats.ocupadosParcial ?? stats.boletosParciales ?? fallback.ocupadosParcial ?? 0);
+      const boletosOcupados = Number(stats.boletosOcupados ?? (ocupadosTotal + ocupadosParcial));
+      const boletosFaltantes = Number(stats.boletosFaltantes ?? Math.max(totalAsientos - boletosOcupados, 0));
+      const ingresosTotales = Number(stats.ingresosTotales || stats.recaudado || fallback.ingresosTotales || 0);
+      const porcentajeVendido = Number(stats.porcentajeVendido || stats.porcentajeOcupacion || (totalAsientos ? Math.round((boletosOcupados / totalAsientos) * 100) : 0));
+      const zonesByName = emptyZoneStats();
+
+      Object.values(zonesByName).forEach(zone => { zone.parciales = 0; zone.ocupados = 0; });
+
+      if (Array.isArray(stats.zonas)) {
+        stats.zonas.forEach(zone => {
+          const zoneName = String(zone.zona || zone.nombre || '').trim().toUpperCase();
+          const target = zonesByName[zoneName];
+          if (!target) return;
+          target.vendidos = Number(zone.vendidos ?? zone.ocupadosTotal ?? 0);
+          target.parciales = Number(zone.parciales ?? zone.ocupadosParcial ?? 0);
+          target.ocupados = Number(zone.ocupados ?? (target.vendidos + target.parciales));
+          target.ingresos = Number(zone.ingresos || 0);
+          target.totalAsientos = Number(zone.totalAsientos || target.totalAsientos);
+          target.faltantes = Number(zone.faltantes ?? Math.max(target.totalAsientos - target.ocupados, 0));
+          target.porcentaje = Number(zone.porcentaje || (target.totalAsientos ? Math.round((target.ocupados / target.totalAsientos) * 100) : 0));
+        });
+      } else {
+        fallback.zonas.forEach(zone => { zonesByName[zone.zona] = zone; });
+      }
+
+      return {
+        totalAsientos,
+        boletosVendidos: ocupadosTotal,
+        ocupadosTotal,
+        ocupadosParcial,
+        boletosOcupados,
+        boletosFaltantes,
+        porcentajeVendido,
+        ingresosTotales,
+        zonas: Object.values(zonesByName)
+      };
+    }
+
+    function renderDashboard(stats) {
+      const data = normalizeStats(stats);
+      metricSold.textContent = data.ocupadosTotal.toLocaleString('es-MX');
+      metricSoldNote.textContent = `ocupado total · ${data.totalAsientos.toLocaleString('es-MX')} lugares`;
+      metricPartial.textContent = data.ocupadosParcial.toLocaleString('es-MX');
+      metricAvailable.textContent = data.boletosFaltantes.toLocaleString('es-MX');
+      metricRevenue.textContent = currency(data.ingresosTotales);
+      metricProgress.textContent = `${data.porcentajeVendido}%`;
+      metricProgressFill.style.width = `${Math.min(Math.max(data.porcentajeVendido, 0), 100)}%`;
+
+      const zoneMap = new Map(data.zonas.map(zone => [zone.zona, zone]));
+      updateZoneMetric(zoneGolden, zoneMap.get('GOLDEN'));
+      updateZoneMetric(zoneGeneral1, zoneMap.get('GENERAL 1'));
+      updateZoneMetric(zoneGeneral2, zoneMap.get('GENERAL 2'));
+    }
+
+    function updateZoneMetric(element, zone) {
+      if (!zone) return;
+      const parciales = Number(zone.parciales || 0);
+      element.textContent = `${zone.vendidos.toLocaleString('es-MX')} total · ${parciales.toLocaleString('es-MX')} parcial · ${zone.faltantes.toLocaleString('es-MX')} faltantes · ${currency(zone.ingresos)}`;
+    }
+
+    function clearSelection() {
+      selected.clear();
+      document.querySelectorAll('.seat.selected').forEach(seat => seat.classList.remove('selected'));
+      renderSelection();
+    }
+
+    async function reserveNow() {
+      const items = sortedSelected();
+      if (!items.length) return;
+
+      const nombre = customerName.value.trim();
+      const contacto = customerContact.value.trim();
+      if (!nombre) {
+        showToast('Escribe el nombre del cliente.');
+        customerName.focus();
+        return;
+      }
+      if (!contacto) {
+        showToast('Escribe el celular o WhatsApp del cliente.');
+        customerContact.focus();
+        return;
+      }
+      if (!isGoogleScriptConfigured()) {
+        alert('Falta configurar GOOGLE_SCRIPT_URL en el archivo index.html. Pega la URL /exec de tu Web App de Apps Script.');
+        return;
+      }
+
+      const total = getSelectedTotal(items);
+      const payment = getPaymentDetails(total);
+      if (payment.partial) {
+        if (payment.paid <= 0) {
+          showToast('Indica cuanto pago el cliente hasta el momento.');
+          partialPaymentAmount.focus();
+          return;
+        }
+        if (payment.paid >= total) {
+          showToast('Para pago parcial, el pago debe ser menor al total. Usa Ocupado total si ya liquido.');
+          partialPaymentAmount.focus();
+          return;
+        }
+      }
+
+      const paymentBySeat = new Map(distributePaymentBySeat(items, payment.paid, total).map(item => [item.seatId, item]));
+      const payload = {
+        action: 'reserve',
+        version: '2026-06-25-partial-payment-fix-v2',
+        evento: EVENT_NAME,
+        nombre,
+        contacto,
+        total,
+        totalBoletos: total,
+        totalReserva: payment.paid,
+        montoRecibido: payment.paid,
+        montoPagado: payment.paid,
+        cantidad: items.length,
+        estado: payment.estado,
+        status: payment.estado,
+        estatus: payment.estado,
+        tipoPago: payment.partial ? 'Pago parcial' : 'Pago total',
+        pagoRealizado: payment.paid,
+        saldoRestante: payment.remaining,
+        ubicacion: VENUE_MAP,
+        origen: window.location.href,
+        asientos: items.map(item => {
+          const seatPayment = paymentBySeat.get(item.seatId) || { pagoRealizado: item.price, saldoRestante: 0 };
+          return {
+            id: item.seatId,
+            zona: item.sectionTitle,
+            precio: item.price,
+            fila: item.row,
+            columna: item.column,
+            pagoRealizado: seatPayment.pagoRealizado,
+            saldoRestante: seatPayment.saldoRestante
+          };
+        })
+      };
+
+      const sent = await sendReservationToSheet(payload);
+      if (!sent) return;
+
+      const message = buildWhatsappMessage(nombre, contacto, items, total, payment);
+
+      items.forEach(item => {
+        const seatPayment = paymentBySeat.get(item.seatId) || { pagoRealizado: item.price, saldoRestante: 0 };
+        setLocalSeatStatus(item.seatId, payment.estado, {
+          id: item.seatId,
+          estado: payment.estado,
+          nombre,
+          contacto,
+          zona: item.sectionTitle,
+          precio: item.price,
+          pagoRealizado: seatPayment.pagoRealizado,
+          saldoRestante: seatPayment.saldoRestante,
+          totalReserva: payment.paid,
+          cantidad: items.length
+        });
+      });
+      saveOccupiedSeats();
+      applyOccupiedState();
+      clearSelection();
+
+      await shareReservation(nombre, contacto, items, total, message, payment);
+      showToast('Reserva registrada en Google Sheets.');
+      window.setTimeout(() => refreshFromSheet({ silent: true }), 1500);
+    }
+
+    async function sendReservationToSheet(payload) {
+      reserveBtn.disabled = true;
+      reserveBtn.textContent = 'Registrando...';
+      try {
+        // text/plain + no-cors evita el bloqueo por CORS al publicar desde GitHub Pages.
+        await fetch(GOOGLE_SCRIPT_URL, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify(payload)
+        });
+        return true;
+      } catch (error) {
+        console.error(error);
+        showToast('No se pudo registrar. Revisa tu conexion o la URL del Apps Script.');
+        return false;
+      } finally {
+        reserveBtn.textContent = 'Reservar ahora';
+        renderSelection();
+      }
+    }
+
+    function markSelectionOccupied() {
+      const items = sortedSelected();
+      if (!items.length) return;
+      const estado = bookingStatus.value || 'Ocupado total';
+      items.forEach(item => setLocalSeatStatus(item.seatId, estado));
+      saveOccupiedSeats();
+      applyOccupiedState();
+      clearSelection();
+      showToast(`${items.length} asiento(s) marcado(s) como ${estado.toLowerCase()} en este navegador.`);
+    }
+
+    function setLocalSeatStatus(seatId, estado, detail = null) {
+      const id = normalizeSeatId(seatId);
+      if (!id) return;
+      const normalizedEstado = String(estado || '').toLowerCase().includes('parcial') ? 'Ocupado parcial' : 'Ocupado total';
+      if (normalizedEstado.toLowerCase().includes('parcial')) {
+        occupiedPartial.add(id);
+        occupiedTotal.delete(id);
+      } else {
+        occupiedTotal.add(id);
+        occupiedPartial.delete(id);
+      }
+      if (detail && typeof detail === 'object') {
+        seatDetails.set(id, { ...detail, id, seatId: id, estado: normalizedEstado });
+      } else if (!seatDetails.has(id)) {
+        seatDetails.set(id, { id, seatId: id, estado: normalizedEstado });
+      } else {
+        seatDetails.set(id, { ...seatDetails.get(id), estado: normalizedEstado });
+      }
+    }
+
+    function resetOccupied() {
+      if (!confirm('Limpiar el cache local y volver a sincronizar con Google Sheets? No se borrara nada en Sheets.')) return;
+      occupiedTotal = new Set();
+      occupiedPartial = new Set();
+      releaseSelection.clear();
+      liquidationSelection.clear();
+      seatDetails = new Map();
+      saveOccupiedSeats();
+      applyOccupiedState();
+      refreshFromSheet({ silent: false });
+    }
+
+    function loadOccupiedFromInput() {
+      const ids = parseSeatIds(occupiedInput.value);
+      if (!ids.length) return;
+      const estado = bookingStatus.value || 'Ocupado total';
+      ids.forEach(id => setLocalSeatStatus(id, estado));
+      saveOccupiedSeats();
+      applyOccupiedState();
+      occupiedInput.value = '';
+      clearSelection();
+      showToast(`Asientos cargados localmente como ${estado.toLowerCase()}.`);
+    }
+
+    function parseSeatIds(value) {
+      return Array.from(new Set(String(value || '').split(',').map(normalizeSeatId).filter(Boolean)));
+    }
+
+    function applyOccupiedState() {
+      const seatMap = document.querySelector('.seat-map');
+      seatMap?.classList.toggle('release-mode', releaseMode);
+      seatMap?.classList.toggle('liquidation-mode', liquidationMode);
+      document.querySelectorAll('.seat').forEach(btn => {
+        const seatId = btn.dataset.seatId;
+        applySeatStateToButton(btn);
+        if (isSeatOccupied(seatId)) btn.classList.remove('selected');
+      });
+      selected.forEach((_, id) => { if (isSeatOccupied(id)) selected.delete(id); });
+      updateReleaseModeUI();
+      updateLiquidationModeUI();
+      renderSelection();
+      renderDashboard();
+    }
+
+    function loadSeatSet(key, fallback = []) {
+      try {
+        const values = JSON.parse(localStorage.getItem(key) || 'null');
+        if (Array.isArray(values)) return values.map(normalizeSeatId).filter(Boolean);
+      } catch (error) {}
+      return Array.isArray(fallback) ? fallback.map(normalizeSeatId).filter(Boolean) : [];
+    }
+    function loadSeatDetails() {
+      try {
+        const raw = JSON.parse(localStorage.getItem(SEAT_DETAILS_KEY) || '{}');
+        const entries = Array.isArray(raw) ? raw : Object.entries(raw || {});
+        return new Map(entries.map(entry => {
+          const key = Array.isArray(entry) ? entry[0] : entry.id || entry.seatId;
+          const value = Array.isArray(entry) ? entry[1] : entry;
+          return [normalizeSeatId(key), value];
+        }).filter(([key]) => Boolean(key)));
+      } catch (error) {
+        return new Map();
+      }
+    }
+
+    function saveSeatDetails() {
+      const obj = {};
+      seatDetails.forEach((value, key) => { obj[key] = value; });
+      localStorage.setItem(SEAT_DETAILS_KEY, JSON.stringify(obj));
+    }
+
+
+    function saveOccupiedSeats() {
+      const totalIds = Array.from(occupiedTotal);
+      const partialIds = Array.from(occupiedPartial).filter(id => !occupiedTotal.has(id));
+      localStorage.setItem(OCCUPIED_TOTAL_KEY, JSON.stringify(totalIds));
+      localStorage.setItem(OCCUPIED_PARTIAL_KEY, JSON.stringify(partialIds));
+      localStorage.setItem(OCCUPIED_KEY, JSON.stringify([...new Set([...totalIds, ...partialIds])]));
+      saveSeatDetails();
+    }
+
+    function toggleReleaseMode() {
+      releaseMode = !releaseMode;
+      if (releaseMode) {
+        liquidationMode = false;
+        clearSelection();
+        liquidationSelection.clear();
+      }
+      releaseSelection.clear();
+      document.querySelectorAll('.seat.release-selected').forEach(seat => seat.classList.remove('release-selected'));
+      document.querySelectorAll('.seat.liquidation-selected').forEach(seat => seat.classList.remove('liquidation-selected'));
+      applyOccupiedState();
+      showToast(releaseMode ? 'Modo eliminar activado: toca asientos ocupados.' : 'Modo eliminar desactivado.');
+    }
+
+    function toggleLiquidationMode() {
+      liquidationMode = !liquidationMode;
+      if (liquidationMode) {
+        releaseMode = false;
+        clearSelection();
+        releaseSelection.clear();
+      }
+      liquidationSelection.clear();
+      document.querySelectorAll('.seat.release-selected').forEach(seat => seat.classList.remove('release-selected'));
+      document.querySelectorAll('.seat.liquidation-selected').forEach(seat => seat.classList.remove('liquidation-selected'));
+      applyOccupiedState();
+      showToast(liquidationMode ? 'Modo liquidar activado: toca asientos marrones de pago parcial.' : 'Modo liquidar desactivado.');
+    }
+
+    function updateReleaseModeUI() {
+      if (!releaseModeBtn || !releaseSeatsBtn) return;
+      releaseModeBtn.textContent = releaseMode ? 'Modo eliminar: encendido' : 'Modo eliminar: apagado';
+      releaseSeatsBtn.disabled = releaseSelection.size === 0;
+      releaseSeatsBtn.textContent = releaseSelection.size ? `Eliminar ${releaseSelection.size} seleccionado(s)` : 'Eliminar seleccionados';
+    }
+
+    function updateLiquidationModeUI() {
+      if (!liquidationModeBtn || !liquidateSeatsBtn) return;
+      liquidationModeBtn.textContent = liquidationMode ? 'Modo liquidar parcial: encendido' : 'Modo liquidar parcial: apagado';
+      liquidateSeatsBtn.disabled = liquidationSelection.size === 0;
+      liquidateSeatsBtn.textContent = liquidationSelection.size ? `Liquidar ${liquidationSelection.size} seleccionado(s)` : 'Liquidar seleccionados';
+    }
+
+    async function releaseSelectedSeats() {
+      await releaseSeats(Array.from(releaseSelection));
+    }
+
+    async function releaseInputSeats() {
+      await releaseSeats(parseSeatIds(occupiedInput.value));
+    }
+
+    async function liquidateSelectedSeats() {
+      await liquidateSeats(Array.from(liquidationSelection));
+    }
+
+    async function liquidateInputSeats() {
+      await liquidateSeats(parseSeatIds(liquidationInput.value));
+    }
+
+    async function releaseSeats(ids) {
+      const cleanIds = Array.from(new Set((ids || []).map(normalizeSeatId).filter(Boolean)));
+      if (!cleanIds.length) {
+        showToast('Escribe o selecciona al menos un asiento ocupado.');
+        return;
+      }
+      if (!isGoogleScriptConfigured()) {
+        showToast('Configura GOOGLE_SCRIPT_URL para eliminar asientos en Sheets.');
+        return;
+      }
+      if (!confirm(`Eliminar ${cleanIds.length} asiento(s) de Google Sheets y dejarlos disponibles en la app?
+
+${cleanIds.join(', ')}`)) return;
+
+      try {
+        await fetch(GOOGLE_SCRIPT_URL, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify({ action: 'deleteSeats', asientos: cleanIds, notas: 'Eliminado desde la pagina web' })
+        });
+
+        cleanIds.forEach(id => {
+          occupiedTotal.delete(id);
+          occupiedPartial.delete(id);
+          seatDetails.delete(id);
+          releaseSelection.delete(id);
+        });
+        occupiedInput.value = '';
+        saveOccupiedSeats();
+        applyOccupiedState();
+        showToast(`${cleanIds.length} asiento(s) eliminado(s). Actualizando Sheets...`);
+        window.setTimeout(() => refreshFromSheet({ silent: true }), 1500);
+      } catch (error) {
+        console.error(error);
+        showToast('No se pudo eliminar en Sheets. Revisa la URL o conexion.');
+      }
+    }
+
+    async function liquidateSeats(ids) {
+      const cleanIds = Array.from(new Set((ids || []).map(normalizeSeatId).filter(Boolean)));
+      if (!cleanIds.length) {
+        showToast('Selecciona o escribe al menos un asiento en pago parcial.');
+        return;
+      }
+      const notPartial = cleanIds.filter(id => !occupiedPartial.has(id));
+      if (notPartial.length) {
+        showToast(`Estos asientos no estan en pago parcial: ${notPartial.join(', ')}`);
+        return;
+      }
+      if (!isGoogleScriptConfigured()) {
+        showToast('Configura GOOGLE_SCRIPT_URL para actualizar pagos parciales en Sheets.');
+        return;
+      }
+
+      const groups = buildLiquidationGroups(cleanIds);
+      if (!groups.length) {
+        showToast('No encontre datos del cliente para esos asientos. Presiona Actualizar desde Sheets e intenta otra vez.');
+        return;
+      }
+
+      if (!confirm(`Actualizar ${cleanIds.length} asiento(s) de pago parcial a pago total y generar boleto oficial?
+
+${cleanIds.join(', ')}`)) return;
+
+      try {
+        await fetch(GOOGLE_SCRIPT_URL, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify({ action: 'markPaid', asientos: cleanIds, notas: 'Liquidado desde la pagina web' })
+        });
+
+        cleanIds.forEach(id => {
+          const detail = seatDetails.get(id) || {};
+          const section = getSectionBySeatId(id) || {};
+          const price = Number(detail.precio || detail.price || section.price || 0);
+          occupiedPartial.delete(id);
+          occupiedTotal.add(id);
+          liquidationSelection.delete(id);
+          seatDetails.set(id, { ...detail, id, seatId: id, estado: 'Ocupado total', pagoRealizado: price, saldoRestante: 0 });
+        });
+        if (liquidationInput) liquidationInput.value = '';
+        saveOccupiedSeats();
+        applyOccupiedState();
+
+        for (const group of groups) {
+          const total = getSelectedTotal(group.items);
+          const payment = { estado: 'Ocupado total', partial: false, total, paid: total, remaining: 0 };
+          const message = buildWhatsappMessage(group.nombre, group.contacto, group.items, total, payment);
+          await shareReservation(group.nombre, group.contacto, group.items, total, message, payment);
+        }
+
+        showToast('Pago actualizado a total. Se genero el boleto oficial para el cliente.');
+        window.setTimeout(() => refreshFromSheet({ silent: true }), 1500);
+      } catch (error) {
+        console.error(error);
+        showToast('No se pudo liquidar en Sheets. Revisa la URL o conexion.');
+      }
+    }
+
+    function buildLiquidationGroups(ids) {
+      const groups = new Map();
+      ids.forEach(id => {
+        const detail = seatDetails.get(id) || {};
+        const item = buildItemFromSeatDetail(id, detail);
+        if (!item) return;
+        const nombre = String(detail.nombre || detail.cliente || customerName.value || '').trim();
+        const contacto = String(detail.contacto || detail.whatsapp || customerContact.value || '').trim();
+        const reservaId = String(detail.reservaId || detail.idReserva || '').trim();
+        if (!nombre || !contacto) return;
+        const key = `${normalizePhoneForWhatsapp(contacto)}|${nombre}|${reservaId || id}`;
+        if (!groups.has(key)) groups.set(key, { nombre, contacto, reservaId, items: [] });
+        groups.get(key).items.push(item);
+      });
+      return Array.from(groups.values()).map(group => ({ ...group, items: sortItems(group.items) }));
+    }
+
+    function buildItemFromSeatDetail(seatId, detail = {}) {
+      const id = normalizeSeatId(seatId);
+      if (!id) return null;
+      const section = getSectionBySeatId(id) || sections.find(sec => sec.title === String(detail.zona || '').trim().toUpperCase());
+      if (!section) return null;
+      const row = Number(String(id).match(/^\d+/)?.[0] || detail.fila || 0);
+      const column = String(id).replace(/[0-9]/g, '').trim().toUpperCase();
+      return {
+        seatId: id,
+        sectionId: section.id,
+        sectionTitle: section.title,
+        price: Number(detail.precio || detail.price || section.price || 0),
+        row,
+        column
+      };
+    }
+
+    function sortItems(items) {
+      const order = new Map(sections.map((section, index) => [section.id, index]));
+      return Array.from(items).sort((a, b) => {
+        if (order.get(a.sectionId) !== order.get(b.sectionId)) return order.get(a.sectionId) - order.get(b.sectionId);
+        if (a.row !== b.row) return a.row - b.row;
+        return getColumnSortValue(a) - getColumnSortValue(b);
+      });
+    }
+
+    function isGoogleScriptConfigured() {
+      return GOOGLE_SCRIPT_URL && !GOOGLE_SCRIPT_URL.includes('PEGA_AQUI') && GOOGLE_SCRIPT_URL.includes('/exec');
+    }
+
+    function refreshFromSheet(options = {}) {
+      refreshOccupiedFromSheet(options);
+      refreshDashboardFromSheet(options);
+    }
+
+    function refreshOccupiedFromSheet(options = {}) {
+      if (!isGoogleScriptConfigured()) {
+        showToast('Configura GOOGLE_SCRIPT_URL para leer Google Sheets.');
+        dashboardUpdated.textContent = 'Modo local: sin conexion a Sheets';
+        renderDashboard();
+        return;
+      }
+      const callbackName = `ocuparAsientos_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
+      const script = document.createElement('script');
+      const separator = GOOGLE_SCRIPT_URL.includes('?') ? '&' : '?';
+
+      window[callbackName] = function(data) {
+        applySeatStatusData(data);
+        saveOccupiedSeats();
+        applyOccupiedState();
+        const totalCount = occupiedTotal.size + occupiedPartial.size;
+        if (!options.silent) showToast(`Mapa actualizado: ${totalCount} asiento(s) bloqueado(s) desde Sheets.`);
+        delete window[callbackName];
+        script.remove();
+      };
+
+      script.onerror = function() {
+        if (!options.silent) showToast('No se pudo leer Google Sheets. Revisa la URL del Apps Script.');
+        dashboardUpdated.textContent = 'No se pudo sincronizar con Sheets';
+        renderDashboard();
+        delete window[callbackName];
+        script.remove();
+      };
+
+      script.src = `${GOOGLE_SCRIPT_URL}${separator}callback=${callbackName}&mode=seats&t=${Date.now()}`;
+      document.body.appendChild(script);
+    }
+
+    function applySeatStatusData(data) {
+      if (Array.isArray(data)) {
+        occupiedTotal = new Set(data.map(normalizeSeatId).filter(Boolean));
+        occupiedPartial = new Set();
+        seatDetails = new Map(Array.from(occupiedTotal).map(id => [id, { id, seatId: id, estado: 'Ocupado total' }]));
+        return;
+      }
+
+      const totalIds = data && (data.ocupadoTotal || data.ocupadosTotal || data.total || data.ocupados || []);
+      const partialIds = data && (data.ocupadoParcial || data.ocupadosParcial || data.parcial || []);
+      occupiedTotal = new Set((Array.isArray(totalIds) ? totalIds : []).map(normalizeSeatId).filter(Boolean));
+      occupiedPartial = new Set((Array.isArray(partialIds) ? partialIds : []).map(normalizeSeatId).filter(Boolean));
+      occupiedPartial.forEach(id => { if (occupiedTotal.has(id)) occupiedPartial.delete(id); });
+
+      const incomingDetails = normalizeSeatDetails(data && (data.detalles || data.details || data.detallesAsientos || data.seatDetails));
+      const nextDetails = new Map();
+      occupiedTotal.forEach(id => nextDetails.set(id, { ...(incomingDetails.get(id) || seatDetails.get(id) || {}), id, seatId: id, estado: 'Ocupado total' }));
+      occupiedPartial.forEach(id => nextDetails.set(id, { ...(incomingDetails.get(id) || seatDetails.get(id) || {}), id, seatId: id, estado: 'Ocupado parcial' }));
+      seatDetails = nextDetails;
+    }
+
+    function normalizeSeatDetails(raw) {
+      const map = new Map();
+      if (!raw) return map;
+      const entries = Array.isArray(raw) ? raw.map(item => [item.id || item.seatId, item]) : Object.entries(raw);
+      entries.forEach(([key, value]) => {
+        const id = normalizeSeatId(key || value?.id || value?.seatId);
+        if (id) map.set(id, { ...value, id, seatId: id });
+      });
+      return map;
+    }
+
+    function refreshDashboardFromSheet(options = {}) {
+      if (!isGoogleScriptConfigured()) {
+        dashboardUpdated.textContent = 'Modo local: sin conexion a Sheets';
+        renderDashboard();
+        return;
+      }
+
+      const callbackName = `dashboardVentas_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
+      const script = document.createElement('script');
+      const separator = GOOGLE_SCRIPT_URL.includes('?') ? '&' : '?';
+
+      window[callbackName] = function(stats) {
+        renderDashboard(stats);
+        dashboardUpdated.textContent = `Actualizado ${new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}`;
+        delete window[callbackName];
+        script.remove();
+      };
+
+      script.onerror = function() {
+        dashboardUpdated.textContent = 'Metricas calculadas en modo local';
+        renderDashboard();
+        delete window[callbackName];
+        script.remove();
+      };
+
+      script.src = `${GOOGLE_SCRIPT_URL}${separator}callback=${callbackName}&mode=stats&t=${Date.now()}`;
+      document.body.appendChild(script);
+    }
+
+    function buildWhatsappMessage(nombre, contacto, items, total, payment = getPaymentDetails(total)) {
+      const grouped = sections.map(section => {
+        const seats = items.filter(item => item.sectionId === section.id).map(item => item.seatId);
+        return seats.length ? `${section.title}: ${seats.join(', ')}` : null;
+      }).filter(Boolean).join('\n');
+
+      const lines = [
+        `Hola *${nombre},* te compartimos tu reserva de boletos para ${WHATSAPP_EVENT_TEXT}.`,
+        '',
+        `Nombre: ${nombre}`,
+        `Contacto: ${contacto}`,
+        '',
+        grouped,
+        '',
+        `Total: ${currency(total)}`
+      ];
+
+      if (payment.partial) {
+        lines.push(
+          `Pago realizado hasta el momento: ${currency(payment.paid)}`,
+          `Resta por liquidar: ${currency(payment.remaining)}`,
+          '',
+          'Tu apartado quedo registrado como *pago parcial*. La entrada oficial en imagen se entregara cuando el boleto este liquidado al 100%.'
+        );
+      } else {
+        lines.push(
+          'Estatus: Pago total liquidado',
+          'Esta ya es una entrada 100% oficial y aprobada para el espectaculo de Producciones Rainbow.'
+        );
+      }
+
+      lines.push(
+        `Ubicacion: ${VENUE_MAP}`,
+        '',
+        `*${BRAND_NAME}*`
+      );
+
+      return lines.join('\n');
+    }
+
+    async function shareReservation(nombre, contacto, items, total, message, payment = getPaymentDetails(total)) {
+      const files = payment.partial ? [] : await createTicketImageFiles(nombre, contacto, items, total);
+      const customerPhone = normalizePhoneForWhatsapp(contacto);
+
+      if (!customerPhone) {
+        showToast('Reserva registrada, pero el numero del cliente no parece valido para WhatsApp.');
+        if (files.length) window.setTimeout(() => downloadTicketImages(files), 500);
+        return;
+      }
+
+      const waUrl = `https://wa.me/${customerPhone}?text=${encodeURIComponent(message)}`;
+      const opened = window.open(waUrl, '_blank', 'noopener');
+      if (!opened) showToast('El navegador bloqueo WhatsApp. Permite pop-ups para enviar el mensaje al cliente.');
+
+      if (files.length) {
+        window.setTimeout(() => downloadTicketImages(files), 900);
+        showToast('Se abrira WhatsApp del cliente. Adjunta la imagen descargada.');
+      } else if (payment.partial) {
+        showToast('Pago parcial registrado: se enviara solo mensaje, sin imagen de boleto oficial.');
+      }
+    }
+
+    function normalizePhoneForWhatsapp(value) {
+      let digits = String(value || '').replace(/\D/g, '');
+      if (!digits) return '';
+      if (digits.length === 10) digits = `52${digits}`;
+      if (digits.length === 11 && digits.startsWith('1')) digits = `52${digits.slice(1)}`;
+      return digits;
+    }
+
+    async function createTicketImageFiles(nombre, contacto, items, total) {
+      const groups = sections.map(section => {
+        const seats = items.filter(item => item.sectionId === section.id);
+        return seats.length ? { section, seats } : null;
+      }).filter(Boolean);
+
+      const files = [];
+      for (const group of groups) {
+        const subtotal = group.seats.reduce((sum, item) => sum + item.price, 0);
+        files.push(await createTicketImageFile({
+          section: group.section,
+          seats: group.seats,
+          nombre,
+          contacto,
+          subtotal,
+          total
+        }));
+      }
+      return files;
+    }
+
+    async function createTicketImageFile({ section, seats, nombre, contacto, subtotal, total }) {
+      const canvas = document.createElement('canvas');
+      canvas.width = 1080;
+      canvas.height = 1350;
+      const ctx = canvas.getContext('2d');
+      const theme = section.ticket;
+
+      const bg = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+      bg.addColorStop(0, theme.secondary);
+      bg.addColorStop(0.52, theme.primary);
+      bg.addColorStop(1, '#12041f');
+      ctx.fillStyle = bg;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      drawGlow(ctx, 185, 170, 260, 'rgba(255,255,255,.22)');
+      drawGlow(ctx, 890, 160, 210, 'rgba(255,231,137,.28)');
+      drawGlow(ctx, 860, 1130, 280, 'rgba(255,79,163,.24)');
+      drawRainbowArcs(ctx, 520, 145);
+
+      roundRect(ctx, 60, 55, 960, 1240, 42);
+      ctx.fillStyle = 'rgba(255,255,255,.13)';
+      ctx.fill();
+      ctx.lineWidth = 5;
+      ctx.strokeStyle = 'rgba(255,255,255,.72)';
+      ctx.setLineDash([18, 15]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      roundRect(ctx, 95, 92, 890, 214, 34);
+      ctx.fillStyle = 'rgba(93, 5, 28, .70)';
+      ctx.fill();
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = 'rgba(255,255,255,.30)';
+      ctx.stroke();
+
+      ctx.fillStyle = '#fff';
+      ctx.font = '900 42px Inter, Arial, sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText('PR', 135, 165);
+      ctx.font = '900 54px Inter, Arial, sans-serif';
+      ctx.fillText('Producciones Rainbow', 220, 165);
+      ctx.font = '800 27px Inter, Arial, sans-serif';
+      ctx.fillStyle = 'rgba(255,255,255,.82)';
+      ctx.fillText('Reserva de boletos', 222, 210);
+      drawStar(ctx, 910, 160, 46, '#ffe789');
+
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#fff';
+      ctx.font = '950 78px Inter, Arial, sans-serif';
+      ctx.fillText(section.title, 540, 410);
+      ctx.font = '950 62px Inter, Arial, sans-serif';
+      ctx.fillText(`BOLETO ${theme.nombre}`, 540, 485);
+      ctx.font = '900 34px Inter, Arial, sans-serif';
+      ctx.fillStyle = 'rgba(255,255,255,.86)';
+      ctx.fillText('Huntrix - Auditorio Jorge Jimenez Cantu', 540, 540);
+
+      roundRect(ctx, 120, 605, 840, 310, 34);
+      ctx.fillStyle = 'rgba(255,255,255,.92)';
+      ctx.fill();
+
+      ctx.textAlign = 'left';
+      ctx.fillStyle = '#32122b';
+      ctx.font = '900 31px Inter, Arial, sans-serif';
+      ctx.fillText('Nombre', 170, 678);
+      ctx.font = '800 38px Inter, Arial, sans-serif';
+      wrapText(ctx, nombre, 170, 727, 720, 44);
+
+      ctx.font = '900 31px Inter, Arial, sans-serif';
+      ctx.fillText('Contacto', 170, 812);
+      ctx.font = '800 36px Inter, Arial, sans-serif';
+      ctx.fillText(contacto, 170, 862);
+
+      roundRect(ctx, 120, 955, 840, 190, 34);
+      ctx.fillStyle = 'rgba(93, 5, 28, .70)';
+      ctx.fill();
+
+      ctx.fillStyle = '#fff';
+      ctx.font = '950 34px Inter, Arial, sans-serif';
+      ctx.fillText('Asientos', 170, 1018);
+      ctx.font = '900 34px Inter, Arial, sans-serif';
+      wrapText(ctx, seats.map(item => item.seatId).join(', '), 170, 1070, 745, 40);
+
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#fff';
+      ctx.font = '950 48px Inter, Arial, sans-serif';
+      ctx.fillText(`Subtotal categoria: ${currency(subtotal)}`, 540, 1190);
+      if (total !== subtotal) {
+        ctx.font = '900 32px Inter, Arial, sans-serif';
+        ctx.fillStyle = 'rgba(255,255,255,.82)';
+        ctx.fillText(`Total reserva: ${currency(total)}`, 540, 1232);
+      }
+
+      ctx.font = '900 25px Inter, Arial, sans-serif';
+      ctx.fillStyle = '#fff';
+      wrapText(ctx, 'Esta ya es una entrada 100% oficial y aprobada para el espectaculo de Producciones Rainbow', 540, 1272, 850, 30);
+
+      ctx.font = '800 22px Inter, Arial, sans-serif';
+      ctx.fillStyle = 'rgba(255,255,255,.78)';
+      ctx.fillText(BRAND_FACEBOOK, 540, 1330);
+
+      const blob = await canvasToBlob(canvas);
+      const safeName = section.title.toLowerCase().replace(/\s+/g, '-');
+      return new File([blob], `boleto-${safeName}-${Date.now()}.png`, { type: 'image/png' });
+    }
+
+    function canvasToBlob(canvas) {
+      return new Promise(resolve => canvas.toBlob(resolve, 'image/png', 0.96));
+    }
+
+    function downloadTicketImages(files) {
+      files.forEach((file, index) => {
+        window.setTimeout(() => {
+          const url = URL.createObjectURL(file);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = file.name;
+          document.body.appendChild(link);
+          link.click();
+          link.remove();
+          window.setTimeout(() => URL.revokeObjectURL(url), 1800);
+        }, index * 350);
+      });
+    }
+
+    function roundRect(ctx, x, y, width, height, radius) {
+      const r = Math.min(radius, width / 2, height / 2);
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.arcTo(x + width, y, x + width, y + height, r);
+      ctx.arcTo(x + width, y + height, x, y + height, r);
+      ctx.arcTo(x, y + height, x, y, r);
+      ctx.arcTo(x, y, x + width, y, r);
+      ctx.closePath();
+    }
+
+    function drawGlow(ctx, x, y, radius, color) {
+      const glow = ctx.createRadialGradient(x, y, 0, x, y, radius);
+      glow.addColorStop(0, color);
+      glow.addColorStop(1, 'rgba(255,255,255,0)');
+      ctx.fillStyle = glow;
+      ctx.beginPath();
+      ctx.arc(x, y, radius, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    function drawRainbowArcs(ctx, cx, cy) {
+      const colors = ['#ff2e85', '#ffd447', '#30e27a', '#1db7ff', '#b141ff'];
+      colors.forEach((color, index) => {
+        ctx.beginPath();
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 13;
+        ctx.arc(cx, cy + 28, 250 + (index * 18), Math.PI * 1.05, Math.PI * 1.95);
+        ctx.stroke();
+      });
+    }
+
+    function drawStar(ctx, cx, cy, spikes, color) {
+      let rot = Math.PI / 2 * 3;
+      let x = cx;
+      let y = cy;
+      const outerRadius = spikes;
+      const innerRadius = spikes * 0.45;
+      const step = Math.PI / 5;
+      ctx.beginPath();
+      ctx.moveTo(cx, cy - outerRadius);
+      for (let i = 0; i < 5; i++) {
+        x = cx + Math.cos(rot) * outerRadius;
+        y = cy + Math.sin(rot) * outerRadius;
+        ctx.lineTo(x, y);
+        rot += step;
+        x = cx + Math.cos(rot) * innerRadius;
+        y = cy + Math.sin(rot) * innerRadius;
+        ctx.lineTo(x, y);
+        rot += step;
+      }
+      ctx.lineTo(cx, cy - outerRadius);
+      ctx.closePath();
+      ctx.fillStyle = color;
+      ctx.fill();
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = 'rgba(255,255,255,.75)';
+      ctx.stroke();
+    }
+
+    function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
+      const words = String(text || '').split(' ');
+      let line = '';
+      for (let n = 0; n < words.length; n++) {
+        const testLine = line + words[n] + ' ';
+        const metrics = ctx.measureText(testLine);
+        if (metrics.width > maxWidth && n > 0) {
+          ctx.fillText(line.trim(), x, y);
+          line = words[n] + ' ';
+          y += lineHeight;
+        } else {
+          line = testLine;
+        }
+      }
+      ctx.fillText(line.trim(), x, y);
+    }
+
+    function showToast(message) {
+      toast.textContent = message;
+      toast.classList.add('show');
+      window.clearTimeout(showToast.timer);
+      showToast.timer = window.setTimeout(() => toast.classList.remove('show'), 2200);
+    }
+
+    function startAutoSync() {
+      if (!isGoogleScriptConfigured() || syncTimer) return;
+      syncTimer = window.setInterval(() => {
+        if (!document.hidden) refreshFromSheet({ silent: true });
+      }, SYNC_INTERVAL_MS);
+      document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) refreshFromSheet({ silent: true });
+      });
+      window.addEventListener('focus', () => refreshFromSheet({ silent: true }));
+    }
+
+    reserveBtn.addEventListener('click', reserveNow);
+    bookingStatus.addEventListener('change', updatePaymentPanel);
+    partialPaymentAmount.addEventListener('input', updatePaymentPanel);
+    clearBtn.addEventListener('click', clearSelection);
+    resetOccupiedBtn.addEventListener('click', resetOccupied);
+    refreshSheetBtn.addEventListener('click', refreshFromSheet);
+    releaseModeBtn.addEventListener('click', toggleReleaseMode);
+    releaseSeatsBtn.addEventListener('click', releaseSelectedSeats);
+    releaseInputBtn.addEventListener('click', releaseInputSeats);
+    liquidationModeBtn.addEventListener('click', toggleLiquidationMode);
+    liquidateSeatsBtn.addEventListener('click', liquidateSelectedSeats);
+    liquidateInputBtn.addEventListener('click', liquidateInputSeats);
+
+    buildMap();
+    renderSelection();
+    renderDashboard();
+    refreshFromSheet();
+    startAutoSync();
+  </script>
+</body>
+</html>
